@@ -7,6 +7,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +27,6 @@ class WalletServiceImplTest {
     private UUID destinationId;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         repository = new InMemoryWalletRepository();
         service = new WalletServiceImpl(repository);
@@ -96,7 +96,9 @@ class WalletServiceImplTest {
         
         TransferRequest request = new TransferRequest(transactionId, sourceId, destinationId, amount);
         
-        assertThrows(InsufficientFundsException.class, () -> service.transfer(request));
+        InsufficientFundsException exception = assertThrows(InsufficientFundsException.class, 
+            () -> service.transfer(request));
+        assertEquals("Insufficient funds in source account", exception.getMessage());
         
         // Verify no changes were made
         assertEquals(new BigDecimal("100.00"), repository.findAccount(sourceId).getBalance());
@@ -110,7 +112,9 @@ class WalletServiceImplTest {
         
         TransferRequest request = new TransferRequest(transactionId, sourceId, sourceId, amount);
         
-        assertThrows(IllegalArgumentException.class, () -> service.transfer(request));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> service.transfer(request));
+        assertEquals("Cannot transfer to same account", exception.getMessage());
     }
     
     @Test
@@ -120,7 +124,9 @@ class WalletServiceImplTest {
         
         TransferRequest request = new TransferRequest(transactionId, sourceId, destinationId, amount);
         
-        assertThrows(IllegalArgumentException.class, () -> service.transfer(request));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> service.transfer(request));
+        assertEquals("Amount must be positive", exception.getMessage());
     }
     
     @Test
@@ -131,6 +137,60 @@ class WalletServiceImplTest {
         
         TransferRequest request = new TransferRequest(transactionId, nonExistentSourceId, destinationId, amount);
         
-        assertThrows(IllegalArgumentException.class, () -> service.transfer(request));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
+            () -> service.transfer(request));
+        assertEquals("Source account not found", exception.getMessage());
+    }
+    
+    @Test
+    void testIdempotentTransfer() {
+        // Create a unique transaction ID for this test
+        UUID transactionId = UUID.randomUUID();
+        BigDecimal amount = new BigDecimal("25.00");
+        
+        // Create a transfer request
+        TransferRequest request = new TransferRequest(transactionId, sourceId, destinationId, amount);
+        
+        // Execute the transfer once
+        service.transfer(request);
+        
+        // Check balances after first transfer
+        Account sourceAfterFirst = repository.findAccount(sourceId);
+        Account destAfterFirst = repository.findAccount(destinationId);
+        
+        assertEquals(new BigDecimal("75.00"), sourceAfterFirst.getBalance());
+        assertEquals(new BigDecimal("75.00"), destAfterFirst.getBalance());
+        
+        // Execute the same transfer (same transaction ID) again
+        service.transfer(request);
+        
+        // Check balances after second transfer - should be unchanged
+        Account sourceAfterSecond = repository.findAccount(sourceId);
+        Account destAfterSecond = repository.findAccount(destinationId);
+        
+        // Balances should remain the same (idempotency)
+        assertEquals(new BigDecimal("75.00"), sourceAfterSecond.getBalance());
+        assertEquals(new BigDecimal("75.00"), destAfterSecond.getBalance());
+        
+        // Check that only one pair of transaction entries was created
+        List<TransactionEntry> sourceTxs = repository.findTransactionsByAccount(sourceId);
+        List<TransactionEntry> destTxs = repository.findTransactionsByAccount(destinationId);
+        
+        assertEquals(1, sourceTxs.size());
+        assertEquals(1, destTxs.size());
+        
+        // Verify the transaction entries match the single transfer
+        TransactionEntry debit = sourceTxs.get(0);
+        TransactionEntry credit = destTxs.get(0);
+        
+        assertEquals(transactionId, debit.getTransactionId());
+        assertEquals(transactionId, credit.getTransactionId());
+        assertEquals(amount, debit.getAmount());
+        assertEquals(amount, credit.getAmount());
+        assertEquals(TransactionEntry.Type.DEBIT, debit.getType());
+        assertEquals(TransactionEntry.Type.CREDIT, credit.getType());
+        
+        // Verify transaction is marked as processed
+        assertTrue(repository.isTransactionProcessed(transactionId));
     }
 } 

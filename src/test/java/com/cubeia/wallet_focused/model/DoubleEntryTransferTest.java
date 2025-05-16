@@ -11,15 +11,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.cubeia.wallet_focused.service.WalletService;
+import com.cubeia.wallet_focused.service.WalletServiceImpl;
+
 class DoubleEntryTransferTest {
     private WalletRepository repo;
+    private WalletService walletService;
     private Account accountA;
     private Account accountB;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         repo = new InMemoryWalletRepository();
+        walletService = new WalletServiceImpl(repo);
         accountA = new Account(UUID.randomUUID(), new BigDecimal("100.00"));
         accountB = new Account(UUID.randomUUID(), new BigDecimal("50.00"));
         repo.saveAccount(accountA);
@@ -51,25 +55,62 @@ class DoubleEntryTransferTest {
 
     @Test
     void testTransferSameAccount() {
-        UUID txId = UUID.randomUUID();
-        BigDecimal amount = new BigDecimal("10.00");
-        // Should not allow transfer to self
-        assertThrows(IllegalArgumentException.class, () -> {
-            if (accountA.getAccountId().equals(accountA.getAccountId())) {
-                throw new IllegalArgumentException("Cannot transfer to same account");
-            }
+        // Create a transfer request with same source and destination account
+        TransferRequest request = new TransferRequest(
+            UUID.randomUUID(),
+            accountA.getAccountId(),
+            accountA.getAccountId(), // Same account as source
+            new BigDecimal("10.00")
+        );
+        
+        // Assert that trying to transfer to the same account throws an exception
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            walletService.transfer(request);
         });
+        
+        // Verify exception message matches the implementation
+        assertEquals("Cannot transfer to same account", exception.getMessage());
+        
+        // Verify account balance remains unchanged
+        assertEquals(new BigDecimal("100.00"), repo.findAccount(accountA.getAccountId()).getBalance());
     }
 
     @Test
     void testTransferNonPositiveAmount() {
-        UUID txId = UUID.randomUUID();
-        BigDecimal amount = new BigDecimal("0.00");
-        // Should not allow zero or negative amount
-        assertThrows(IllegalArgumentException.class, () -> {
-            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("Amount must be positive");
-            }
+        // Create a transfer request with zero amount
+        TransferRequest zeroAmountRequest = new TransferRequest(
+            UUID.randomUUID(),
+            accountA.getAccountId(),
+            accountB.getAccountId(),
+            BigDecimal.ZERO // Zero amount
+        );
+        
+        // Assert that trying to transfer zero amount throws an exception
+        IllegalArgumentException zeroException = assertThrows(IllegalArgumentException.class, () -> {
+            walletService.transfer(zeroAmountRequest);
         });
+        
+        // Verify exception message
+        assertEquals("Amount must be positive", zeroException.getMessage());
+        
+        // Create a transfer request with negative amount
+        TransferRequest negativeAmountRequest = new TransferRequest(
+            UUID.randomUUID(),
+            accountA.getAccountId(),
+            accountB.getAccountId(),
+            new BigDecimal("-10.00") // Negative amount
+        );
+        
+        // Assert that trying to transfer negative amount throws an exception
+        IllegalArgumentException negativeException = assertThrows(IllegalArgumentException.class, () -> {
+            walletService.transfer(negativeAmountRequest);
+        });
+        
+        // Verify exception message
+        assertEquals("Amount must be positive", negativeException.getMessage());
+        
+        // Verify account balances remain unchanged
+        assertEquals(new BigDecimal("100.00"), repo.findAccount(accountA.getAccountId()).getBalance());
+        assertEquals(new BigDecimal("50.00"), repo.findAccount(accountB.getAccountId()).getBalance());
     }
 } 
