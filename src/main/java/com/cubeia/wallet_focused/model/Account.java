@@ -1,32 +1,39 @@
 package com.cubeia.wallet_focused.model;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+/**
+ * Account entity that represents a wallet in the system.
+ * This implementation follows the event sourcing pattern - the account balance
+ * is not stored directly, but calculated from transaction entries.
+ * <p>
+ * See the README.md for more information about the event sourcing approach.
+ */
 @Schema(description = "Account information")
 public class Account {
+    /**
+     * Unique identifier for the account.
+     */
     @Schema(description = "Unique identifier for the account", example = "123e4567-e89b-12d3-a456-426614174000")
     private final UUID accountId;
     
-    @Schema(description = "Current balance of the account", example = "1000.00")
-    private BigDecimal balance;
-
-    public Account(UUID accountId, BigDecimal balance) {
+    /**
+     * Creates a new Account with the specified ID.
+     *
+     * @param accountId the unique identifier for the account
+     */
+    public Account(UUID accountId) {
         this.accountId = accountId;
-        this.balance = balance;
     }
 
+    /**
+     * Gets the unique identifier of this account.
+     *
+     * @return the account's UUID
+     */
     public UUID getAccountId() {
         return accountId;
-    }
-
-    public BigDecimal getBalance() {
-        return balance;
-    }
-
-    public void setBalance(BigDecimal balance) {
-        this.balance = balance;
     }
 } 

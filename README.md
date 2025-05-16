@@ -89,13 +89,28 @@ curl -X GET http://localhost:8080/api/v1/accounts/{accountId}/transactions
 
 ## Design Decisions
 
-### Double-Entry Bookkeeping
+### Double-Entry Bookkeeping and Event Sourcing
 
-The wallet service uses double-entry bookkeeping to ensure financial data integrity:
+The wallet service uses a combination of double-entry bookkeeping and event sourcing patterns:
 
-- Every transfer creates two transaction entries: a DEBIT for the source account and a CREDIT for the destination account
-- Both entries share the same transaction ID to link them together
-- This approach ensures that the ledger is always balanced (total debits = total credits)
+1. **Double-Entry Bookkeeping**
+   - Every transfer creates two transaction entries: a DEBIT for the source account and a CREDIT for the destination account
+   - Both entries share the same transaction ID to link them together
+   - This approach ensures that the ledger is always balanced (total debits = total credits)
+
+2. **Event Sourcing**
+   - Account balances are not stored directly, but calculated from the transaction history
+   - This provides a complete audit trail and allows for balance reconstruction at any point in time
+   - The formula used is: `balance = sum(CREDIT amounts) - sum(DEBIT amounts)`
+
+3. **Event Sourcing + Projection Pattern**
+   - While this implementation uses pure event sourcing (derived balances only), in production systems both approaches are often combined:
+     - **Derived balance**: The authoritative balance calculated from transaction history (for audits)
+     - **Cached balance**: A denormalized balance stored for fast reads (updated during transfers)
+     - **Reconciliation job**: Background process that regularly verifies and fixes any discrepancies
+   - This pattern balances consistency (event sourcing) with performance (projection)
+
+🧠 **Bonus Insight**: Many financial systems use both approaches simultaneously. They maintain derived balances for authority and audits, while using cached balances for fast reads. The cached balances are regularly reconciled against the derived values to ensure consistency.
 
 ### Thread Safety & Concurrency
 

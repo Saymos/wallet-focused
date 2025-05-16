@@ -11,44 +11,91 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.cubeia.wallet_focused.service.AccountService;
+import com.cubeia.wallet_focused.service.AccountServiceImpl;
+import static com.cubeia.wallet_focused.service.TestConstants.SYSTEM_ACCOUNT_ID;
 import com.cubeia.wallet_focused.service.WalletService;
 import com.cubeia.wallet_focused.service.WalletServiceImpl;
 
 class DoubleEntryTransferTest {
     private WalletRepository repo;
+    private AccountService accountService;
     private WalletService walletService;
-    private Account accountA;
-    private Account accountB;
+    private UUID accountIdA;
+    private UUID accountIdB;
 
     @BeforeEach
     void setUp() {
         repo = new InMemoryWalletRepository();
-        walletService = new WalletServiceImpl(repo);
-        accountA = new Account(UUID.randomUUID(), new BigDecimal("100.00"));
-        accountB = new Account(UUID.randomUUID(), new BigDecimal("50.00"));
-        repo.saveAccount(accountA);
-        repo.saveAccount(accountB);
+        accountService = new AccountServiceImpl(repo, null);
+        walletService = new WalletServiceImpl(repo, accountService);
+        
+        // Create system account with initial funds
+        repo.saveAccount(new Account(SYSTEM_ACCOUNT_ID));
+        Instant now = Instant.now();
+        TransactionEntry systemCredit = new TransactionEntry(
+            UUID.randomUUID(),
+            SYSTEM_ACCOUNT_ID,
+            SYSTEM_ACCOUNT_ID,
+            new BigDecimal("1000000.00"),
+            TransactionEntry.Type.CREDIT,
+            now
+        );
+        repo.saveTransaction(systemCredit);
+        
+        // Create test accounts
+        accountIdA = UUID.randomUUID();
+        accountIdB = UUID.randomUUID();
+        
+        repo.saveAccount(new Account(accountIdA));
+        repo.saveAccount(new Account(accountIdB));
+        
+        // Setup initial balances through transactions
+        TransferRequest requestA = new TransferRequest(
+            UUID.randomUUID(),
+            SYSTEM_ACCOUNT_ID,
+            accountIdA,
+            new BigDecimal("100.00")
+        );
+        
+        TransferRequest requestB = new TransferRequest(
+            UUID.randomUUID(),
+            SYSTEM_ACCOUNT_ID,
+            accountIdB,
+            new BigDecimal("50.00")
+        );
+        
+        walletService.transfer(requestA);
+        walletService.transfer(requestB);
+        
+        // Verify initial balances
+        assertEquals(new BigDecimal("100.00"), accountService.calculateBalance(accountIdA));
+        assertEquals(new BigDecimal("50.00"), accountService.calculateBalance(accountIdB));
     }
 
     @Test
     void testDoubleEntryTransfer() {
         UUID txId = UUID.randomUUID();
         BigDecimal amount = new BigDecimal("30.00");
-        // Simulate transfer: debit A, credit B
-        TransactionEntry debit = new TransactionEntry(txId, accountA.getAccountId(), accountB.getAccountId(), amount, TransactionEntry.Type.DEBIT, Instant.now());
-        TransactionEntry credit = new TransactionEntry(txId, accountB.getAccountId(), accountA.getAccountId(), amount, TransactionEntry.Type.CREDIT, Instant.now());
-        accountA.setBalance(accountA.getBalance().subtract(amount));
-        accountB.setBalance(accountB.getBalance().add(amount));
-        repo.saveAccount(accountA);
-        repo.saveAccount(accountB);
-        repo.saveTransaction(debit);
-        repo.saveTransaction(credit);
+        
+        // Perform transfer using the wallet service
+        TransferRequest request = new TransferRequest(
+            txId,
+            accountIdA,
+            accountIdB,
+            amount
+        );
+        
+        walletService.transfer(request);
+        
         // Assert balances
-        assertEquals(new BigDecimal("70.00"), repo.findAccount(accountA.getAccountId()).getBalance());
-        assertEquals(new BigDecimal("80.00"), repo.findAccount(accountB.getAccountId()).getBalance());
+        assertEquals(new BigDecimal("70.00"), accountService.calculateBalance(accountIdA));
+        assertEquals(new BigDecimal("80.00"), accountService.calculateBalance(accountIdB));
+        
         // Assert ledger entries
-        List<TransactionEntry> aTxs = repo.findTransactionsByAccount(accountA.getAccountId());
-        List<TransactionEntry> bTxs = repo.findTransactionsByAccount(accountB.getAccountId());
+        List<TransactionEntry> aTxs = repo.findTransactionsByAccount(accountIdA);
+        List<TransactionEntry> bTxs = repo.findTransactionsByAccount(accountIdB);
+        
         assertTrue(aTxs.stream().anyMatch(e -> e.getType() == TransactionEntry.Type.DEBIT && e.getTransactionId().equals(txId)));
         assertTrue(bTxs.stream().anyMatch(e -> e.getType() == TransactionEntry.Type.CREDIT && e.getTransactionId().equals(txId)));
     }
@@ -58,8 +105,8 @@ class DoubleEntryTransferTest {
         // Create a transfer request with same source and destination account
         TransferRequest request = new TransferRequest(
             UUID.randomUUID(),
-            accountA.getAccountId(),
-            accountA.getAccountId(), // Same account as source
+            accountIdA,
+            accountIdA, // Same account as source
             new BigDecimal("10.00")
         );
         
@@ -72,7 +119,7 @@ class DoubleEntryTransferTest {
         assertEquals("Cannot transfer to same account", exception.getMessage());
         
         // Verify account balance remains unchanged
-        assertEquals(new BigDecimal("100.00"), repo.findAccount(accountA.getAccountId()).getBalance());
+        assertEquals(new BigDecimal("100.00"), accountService.calculateBalance(accountIdA));
     }
 
     @Test
@@ -80,8 +127,8 @@ class DoubleEntryTransferTest {
         // Create a transfer request with zero amount
         TransferRequest zeroAmountRequest = new TransferRequest(
             UUID.randomUUID(),
-            accountA.getAccountId(),
-            accountB.getAccountId(),
+            accountIdA,
+            accountIdB,
             BigDecimal.ZERO // Zero amount
         );
         
@@ -96,8 +143,8 @@ class DoubleEntryTransferTest {
         // Create a transfer request with negative amount
         TransferRequest negativeAmountRequest = new TransferRequest(
             UUID.randomUUID(),
-            accountA.getAccountId(),
-            accountB.getAccountId(),
+            accountIdA,
+            accountIdB,
             new BigDecimal("-10.00") // Negative amount
         );
         
@@ -110,7 +157,7 @@ class DoubleEntryTransferTest {
         assertEquals("Amount must be positive", negativeException.getMessage());
         
         // Verify account balances remain unchanged
-        assertEquals(new BigDecimal("100.00"), repo.findAccount(accountA.getAccountId()).getBalance());
-        assertEquals(new BigDecimal("50.00"), repo.findAccount(accountB.getAccountId()).getBalance());
+        assertEquals(new BigDecimal("100.00"), accountService.calculateBalance(accountIdA));
+        assertEquals(new BigDecimal("50.00"), accountService.calculateBalance(accountIdB));
     }
 } 

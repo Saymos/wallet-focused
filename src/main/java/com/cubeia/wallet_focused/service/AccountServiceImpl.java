@@ -1,5 +1,7 @@
 package com.cubeia.wallet_focused.service;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -8,16 +10,32 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.cubeia.wallet_focused.model.Account;
+import com.cubeia.wallet_focused.model.TransactionEntry;
 import com.cubeia.wallet_focused.model.WalletRepository;
 
+import jakarta.persistence.EntityNotFoundException;
+
+/**
+ * Implementation of the AccountService interface.
+ * Provides account-related operations including retrieving accounts
+ * and calculating balances using event sourcing.
+ */
 @Service
 public class AccountServiceImpl implements AccountService {
     private static final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
     
     private final WalletRepository repository;
+    private final TransactionService transactionService;
 
-    public AccountServiceImpl(WalletRepository repository) {
+    /**
+     * Creates a new AccountServiceImpl with the specified repository and transaction service.
+     *
+     * @param repository the wallet repository to use
+     * @param transactionService the transaction service to use for retrieving transaction history
+     */
+    public AccountServiceImpl(WalletRepository repository, TransactionService transactionService) {
         this.repository = repository;
+        this.transactionService = transactionService;
     }
 
     @Override
@@ -30,7 +48,32 @@ public class AccountServiceImpl implements AccountService {
             return Optional.empty();
         }
         
-        logger.debug("Account found: accountId={}, balance={}", accountId, account.getBalance());
+        logger.debug("Account found: accountId={}", accountId);
         return Optional.of(account);
+    }
+    
+    @Override
+    public BigDecimal calculateBalance(UUID accountId) {
+        logger.debug("Calculating balance for account: accountId={}", accountId);
+        
+        // Check if account exists
+        Account account = repository.findAccount(accountId);
+        if (account == null) {
+            logger.warn("Cannot calculate balance - account not found: accountId={}", accountId);
+            throw new EntityNotFoundException("Account not found: " + accountId);
+        }
+        
+        // Get all transactions for the account
+        List<TransactionEntry> entries = repository.findTransactionsByAccount(accountId);
+        
+        // Calculate balance using transaction entries
+        BigDecimal balance = entries.stream()
+            .map(entry -> entry.getType() == TransactionEntry.Type.CREDIT
+                ? entry.getAmount()
+                : entry.getAmount().negate())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        logger.debug("Calculated balance for account: accountId={}, balance={}", accountId, balance);
+        return balance;
     }
 } 

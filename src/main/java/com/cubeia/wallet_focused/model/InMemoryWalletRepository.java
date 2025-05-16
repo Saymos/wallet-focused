@@ -1,9 +1,19 @@
 package com.cubeia.wallet_focused.model;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * In-memory implementation of the WalletRepository interface.
+ * Uses thread-safe concurrent collections to store accounts, transactions, and
+ * processed transactions.
+ */
 public class InMemoryWalletRepository implements WalletRepository {
     private final Map<UUID, Account> accounts = new ConcurrentHashMap<>();
     private final Map<UUID, List<TransactionEntry>> transactions = new ConcurrentHashMap<>();

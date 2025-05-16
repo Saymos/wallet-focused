@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.cubeia.wallet_focused.dto.TransferRequestDTO;
-import com.cubeia.wallet_focused.dto.mapper.TransferRequestMapper;
 import com.cubeia.wallet_focused.model.InsufficientFundsException;
 import com.cubeia.wallet_focused.service.WalletService;
 
@@ -55,8 +54,8 @@ public class TransferController {
         Map<String, Object> response = new HashMap<>();
         
         try {
-            // Convert DTO to domain model
-            walletService.transfer(TransferRequestMapper.toModel(requestDTO));
+            // Convert DTO to domain model using the toModel method
+            walletService.transfer(requestDTO.toModel());
             
             // Success response
             response.put("success", true);

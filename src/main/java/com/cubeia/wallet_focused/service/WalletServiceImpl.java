@@ -17,17 +17,36 @@ import com.cubeia.wallet_focused.model.TransactionEntry;
 import com.cubeia.wallet_focused.model.TransferRequest;
 import com.cubeia.wallet_focused.model.WalletRepository;
 
+/**
+ * Implementation of the WalletService interface.
+ * Handles the core transfer operations with thread safety, idempotency,
+ * and double-entry bookkeeping.
+ */
 @Service
 public class WalletServiceImpl implements WalletService {
     private static final Logger logger = LoggerFactory.getLogger(WalletServiceImpl.class);
     
     private final WalletRepository repository;
+    private final AccountService accountService;
     private final Map<UUID, ReentrantLock> accountLocks = new ConcurrentHashMap<>();
 
-    public WalletServiceImpl(WalletRepository repository) {
+    /**
+     * Creates a new WalletServiceImpl with the specified repository and account service.
+     *
+     * @param repository the wallet repository to use
+     * @param accountService the account service to use for balance calculation
+     */
+    public WalletServiceImpl(WalletRepository repository, AccountService accountService) {
         this.repository = repository;
+        this.accountService = accountService;
     }
 
+    /**
+     * Gets or creates a lock for the specified account.
+     *
+     * @param accountId the account ID to get a lock for
+     * @return a lock for the specified account
+     */
     private ReentrantLock getLock(UUID accountId) {
         return accountLocks.computeIfAbsent(accountId, k -> new ReentrantLock());
     }
@@ -79,10 +98,11 @@ public class WalletServiceImpl implements WalletService {
                 throw new IllegalArgumentException("Source account not found");
             }
             
-            // Check sufficient funds
-            if (sourceAccount.getBalance().compareTo(request.getAmount()) < 0) {
+            // Calculate current balance and check if sufficient
+            BigDecimal sourceBalance = accountService.calculateBalance(sourceAccount.getAccountId());
+            if (sourceBalance.compareTo(request.getAmount()) < 0) {
                 logger.warn("Insufficient funds in source account: accountId={}, balance={}, requestedAmount={}, transactionId={}", 
-                        sourceAccount.getAccountId(), sourceAccount.getBalance(), request.getAmount(), request.getTransactionId());
+                        sourceAccount.getAccountId(), sourceBalance, request.getAmount(), request.getTransactionId());
                 throw new InsufficientFundsException("Insufficient funds in source account");
             }
             
@@ -90,7 +110,7 @@ public class WalletServiceImpl implements WalletService {
             Account destinationAccount = repository.findAccount(request.getDestinationAccountId());
             if (destinationAccount == null) {
                 logger.info("Creating new destination account: accountId={}", request.getDestinationAccountId());
-                destinationAccount = new Account(request.getDestinationAccountId(), BigDecimal.ZERO);
+                destinationAccount = new Account(request.getDestinationAccountId());
                 repository.saveAccount(destinationAccount);
             }
             
@@ -113,20 +133,17 @@ public class WalletServiceImpl implements WalletService {
                 timestamp
             );
             
-            // Update balances
-            BigDecimal sourceBalanceBefore = sourceAccount.getBalance();
-            BigDecimal destBalanceBefore = destinationAccount.getBalance();
+            // For logging: calculate before/after balances 
+            BigDecimal sourceBalanceBefore = sourceBalance;
+            BigDecimal destBalanceBefore = accountService.calculateBalance(destinationAccount.getAccountId());
+            BigDecimal sourceBalanceAfter = sourceBalanceBefore.subtract(request.getAmount());
+            BigDecimal destBalanceAfter = destBalanceBefore.add(request.getAmount());
             
-            sourceAccount.setBalance(sourceAccount.getBalance().subtract(request.getAmount()));
-            destinationAccount.setBalance(destinationAccount.getBalance().add(request.getAmount()));
+            logger.debug("Account balances for transfer: source [{}] {} -> {}, destination [{}] {} -> {}", 
+                    sourceAccount.getAccountId(), sourceBalanceBefore, sourceBalanceAfter,
+                    destinationAccount.getAccountId(), destBalanceBefore, destBalanceAfter);
             
-            logger.debug("Updating account balances: source [{}] {} -> {}, destination [{}] {} -> {}", 
-                    sourceAccount.getAccountId(), sourceBalanceBefore, sourceAccount.getBalance(),
-                    destinationAccount.getAccountId(), destBalanceBefore, destinationAccount.getBalance());
-            
-            // Save everything
-            repository.saveAccount(sourceAccount);
-            repository.saveAccount(destinationAccount);
+            // Save transaction entries and mark as processed
             repository.saveTransaction(debitEntry);
             repository.saveTransaction(creditEntry);
             repository.markTransactionProcessed(request.getTransactionId());

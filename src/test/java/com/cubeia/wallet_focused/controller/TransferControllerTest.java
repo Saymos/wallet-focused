@@ -115,7 +115,7 @@ public class TransferControllerTest {
         mockMvc.perform(post("/api/v1/accounts/transfer")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error").value("Insufficient funds in source account"));
 

@@ -3,6 +3,8 @@ package com.cubeia.wallet_focused.model;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import com.cubeia.wallet_focused.dto.TransferRequestDTO;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -40,6 +42,24 @@ public class TransferRequest {
         this.sourceAccountId = sourceAccountId;
         this.destinationAccountId = destinationAccountId;
         this.amount = amount;
+    }
+    
+    /**
+     * Creates a new TransferRequest from the provided DTO.
+     *
+     * @param dto the transfer request DTO to convert from
+     * @return a new TransferRequest with values from the DTO
+     */
+    public static TransferRequest fromDto(TransferRequestDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        return new TransferRequest(
+            dto.getTransactionId(),
+            dto.getSourceAccountId(),
+            dto.getDestinationAccountId(),
+            dto.getAmount()
+        );
     }
 
     public UUID getTransactionId() {

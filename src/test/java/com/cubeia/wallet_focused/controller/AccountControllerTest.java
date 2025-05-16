@@ -32,20 +32,28 @@ class AccountControllerTest {
 
     @InjectMocks
     private AccountController accountController;
+    
+    private UUID accountId;
+    private Account account;
+    private BigDecimal balance;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(accountController).build();
+        
+        // Create a test account and balance
+        accountId = UUID.randomUUID();
+        balance = new BigDecimal("100.50");
+        account = new Account(accountId);
     }
 
     @Test
     void getBalance_ValidAccountId_ReturnsBalanceAndStatus200() throws Exception {
-        UUID accountId = UUID.randomUUID();
-        BigDecimal balance = new BigDecimal("100.50");
-        Account account = new Account(accountId, balance);
-
+        // Setup mocks
         when(accountService.getAccount(accountId)).thenReturn(Optional.of(account));
+        when(accountService.calculateBalance(accountId)).thenReturn(balance);
 
+        // Perform test
         mockMvc.perform(get("/api/v1/accounts/{id}/balance", accountId)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -53,19 +61,22 @@ class AccountControllerTest {
                 .andExpect(jsonPath("$.accountId").value(accountId.toString()))
                 .andExpect(jsonPath("$.balance").value("100.5"));
 
+        // Verify interactions
         verify(accountService).getAccount(accountId);
+        verify(accountService).calculateBalance(accountId);
     }
 
     @Test
     void getBalance_NonExistentAccountId_ReturnsStatus404() throws Exception {
-        UUID accountId = UUID.randomUUID();
-
+        // Setup mock
         when(accountService.getAccount(accountId)).thenReturn(Optional.empty());
 
+        // Perform test
         mockMvc.perform(get("/api/v1/accounts/{id}/balance", accountId)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
 
+        // Verify interactions
         verify(accountService).getAccount(accountId);
     }
 

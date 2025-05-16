@@ -1,6 +1,7 @@
 package com.cubeia.wallet_focused.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -17,25 +18,67 @@ import com.cubeia.wallet_focused.model.InMemoryWalletRepository;
 import com.cubeia.wallet_focused.model.TransactionEntry;
 import com.cubeia.wallet_focused.model.TransferRequest;
 import com.cubeia.wallet_focused.model.WalletRepository;
+import static com.cubeia.wallet_focused.service.TestConstants.SYSTEM_ACCOUNT_ID;
 
 class WalletServiceConcurrencyTest {
     private WalletRepository repository;
+    private AccountService accountService;
     private WalletServiceImpl service;
-    private Account accountA;
-    private Account accountB;
     private UUID idA;
     private UUID idB;
 
     @BeforeEach
     void setUp() {
         repository = new InMemoryWalletRepository();
-        service = new WalletServiceImpl(repository);
+        accountService = new AccountServiceImpl(repository, null);
+        service = new WalletServiceImpl(repository, accountService);
+        
+        // Create system account (unlimited funds)
+        repository.saveAccount(new Account(SYSTEM_ACCOUNT_ID));
+        
+        // Create initial credit to system account
+        Instant now = Instant.now();
+        TransactionEntry systemCredit = new TransactionEntry(
+            UUID.randomUUID(),
+            SYSTEM_ACCOUNT_ID,
+            SYSTEM_ACCOUNT_ID,
+            new BigDecimal("1000000.00"),
+            TransactionEntry.Type.CREDIT,
+            now
+        );
+        repository.saveTransaction(systemCredit);
+        
+        // Create test accounts
         idA = UUID.randomUUID();
         idB = UUID.randomUUID();
-        accountA = new Account(idA, new BigDecimal("1000.00"));
-        accountB = new Account(idB, new BigDecimal("1000.00"));
-        repository.saveAccount(accountA);
-        repository.saveAccount(accountB);
+        
+        repository.saveAccount(new Account(idA));
+        repository.saveAccount(new Account(idB));
+        
+        // Initialize account balances with transfers from system account
+        TransferRequest aInitialTransfer = new TransferRequest(
+            UUID.randomUUID(),
+            SYSTEM_ACCOUNT_ID,
+            idA,
+            new BigDecimal("1000.00")
+        );
+        
+        TransferRequest bInitialTransfer = new TransferRequest(
+            UUID.randomUUID(),
+            SYSTEM_ACCOUNT_ID,
+            idB,
+            new BigDecimal("1000.00")
+        );
+        
+        service.transfer(aInitialTransfer);
+        service.transfer(bInitialTransfer);
+        
+        // Verify initial balances are correct
+        BigDecimal balanceA = accountService.calculateBalance(idA);
+        BigDecimal balanceB = accountService.calculateBalance(idB);
+        
+        assertEquals(new BigDecimal("1000.00"), balanceA);
+        assertEquals(new BigDecimal("1000.00"), balanceB);
     }
 
     @Test
@@ -61,13 +104,18 @@ class WalletServiceConcurrencyTest {
             f.get();
         }
         executor.shutdown();
+        
         // Final balances should be unchanged
-        assertEquals(new BigDecimal("1000.00"), repository.findAccount(idA).getBalance());
-        assertEquals(new BigDecimal("1000.00"), repository.findAccount(idB).getBalance());
-        // Each account should have numTransfers debits or credits
+        BigDecimal balanceA = accountService.calculateBalance(idA);
+        BigDecimal balanceB = accountService.calculateBalance(idB);
+        
+        assertEquals(new BigDecimal("1000.00"), balanceA);
+        assertEquals(new BigDecimal("1000.00"), balanceB);
+        
+        // Each account should have numTransfers + 1 entries (1 from setup + numTransfers from test)
         List<TransactionEntry> aTxs = repository.findTransactionsByAccount(idA);
         List<TransactionEntry> bTxs = repository.findTransactionsByAccount(idB);
-        assertEquals(numTransfers, aTxs.size());
-        assertEquals(numTransfers, bTxs.size());
+        assertEquals(numTransfers + 1, aTxs.size());
+        assertEquals(numTransfers + 1, bTxs.size());
     }
 } 
