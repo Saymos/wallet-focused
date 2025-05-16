@@ -3,10 +3,21 @@ package com.cubeia.wallet_focused.model;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
 public class TransferRequest {
+    @NotNull(message = "Transaction ID is required")
     private UUID transactionId;
+    
+    @NotNull(message = "Source account ID is required")
     private UUID sourceAccountId;
+    
+    @NotNull(message = "Destination account ID is required")
     private UUID destinationAccountId;
+    
+    @NotNull(message = "Amount is required")
+    @Positive(message = "Amount must be positive")
     private BigDecimal amount;
 
     public TransferRequest() {
