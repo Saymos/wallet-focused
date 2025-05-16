@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -16,9 +18,11 @@ import com.cubeia.wallet_focused.model.InsufficientFundsException;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.persistence.EntityNotFoundException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(InsufficientFundsException.class)
     @ApiResponse(responseCode = "400", description = "Insufficient funds in source account", 
@@ -44,6 +48,18 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(EntityNotFoundException.class)
+    @ApiResponse(responseCode = "404", description = "Requested resource not found", 
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                "RESOURCE_NOT_FOUND",
+                ex.getMessage(),
+                LocalDateTime.now());
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ApiResponse(responseCode = "400", description = "Validation errors", 
                 content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
@@ -63,6 +79,21 @@ public class GlobalExceptionHandler {
                 errors);
         
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ApiResponse(responseCode = "500", description = "Internal server error", 
+                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex) {
+        logger.error("Unhandled exception occurred", ex);
+        
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "INTERNAL_SERVER_ERROR",
+                "An unexpected error occurred. Please try again later.",
+                LocalDateTime.now());
+        
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Schema(description = "Standard error response")

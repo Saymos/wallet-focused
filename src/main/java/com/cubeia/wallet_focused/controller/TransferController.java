@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.cubeia.wallet_focused.dto.TransferRequestDTO;
+import com.cubeia.wallet_focused.dto.mapper.TransferRequestMapper;
 import com.cubeia.wallet_focused.model.InsufficientFundsException;
-import com.cubeia.wallet_focused.model.TransferRequest;
 import com.cubeia.wallet_focused.service.WalletService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,27 +47,28 @@ public class TransferController {
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/transfer")
-    public ResponseEntity<Map<String, Object>> transfer(@Valid @RequestBody TransferRequest request) {
+    public ResponseEntity<Map<String, Object>> transfer(@Valid @RequestBody TransferRequestDTO requestDTO) {
         logger.info("Transfer request received: source={}, destination={}, amount={}, transactionId={}", 
-                request.getSourceAccountId(), request.getDestinationAccountId(), 
-                request.getAmount(), request.getTransactionId());
+                requestDTO.getSourceAccountId(), requestDTO.getDestinationAccountId(), 
+                requestDTO.getAmount(), requestDTO.getTransactionId());
         
         Map<String, Object> response = new HashMap<>();
         
         try {
-            walletService.transfer(request);
+            // Convert DTO to domain model
+            walletService.transfer(TransferRequestMapper.toModel(requestDTO));
             
             // Success response
             response.put("success", true);
-            if (request.getTransactionId() != null) {
-                response.put("transactionId", request.getTransactionId().toString());
+            if (requestDTO.getTransactionId() != null) {
+                response.put("transactionId", requestDTO.getTransactionId().toString());
             }
             
-            logger.info("Transfer completed successfully: transactionId={}", request.getTransactionId());
+            logger.info("Transfer completed successfully: transactionId={}", requestDTO.getTransactionId());
             return ResponseEntity.ok(response);
         } catch (InsufficientFundsException e) {
             logger.warn("Transfer failed - Insufficient funds: source={}, amount={}, transactionId={}", 
-                    request.getSourceAccountId(), request.getAmount(), request.getTransactionId());
+                    requestDTO.getSourceAccountId(), requestDTO.getAmount(), requestDTO.getTransactionId());
             
             // Handle insufficient funds
             response.put("success", false);
@@ -75,7 +77,7 @@ public class TransferController {
             return ResponseEntity.status(409).body(response);
         } catch (IllegalArgumentException e) {
             logger.warn("Transfer failed - Invalid request: {}, transactionId={}", 
-                    e.getMessage(), request.getTransactionId());
+                    e.getMessage(), requestDTO.getTransactionId());
             
             // Handle invalid arguments
             response.put("success", false);
@@ -84,7 +86,7 @@ public class TransferController {
             return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             logger.error("Unexpected error during transfer: transactionId={}", 
-                    request.getTransactionId(), e);
+                    requestDTO.getTransactionId(), e);
             
             // Handle unexpected errors
             response.put("success", false);
