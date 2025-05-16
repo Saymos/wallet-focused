@@ -1,0 +1,50 @@
+# Maven/Java
+/target/
+/target/*
+/target/classes/
+/target/test-classes/
+/target/generated-sources/
+/target/generated-test-sources/
+/target/maven-status/
+/target/surefire-reports/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Misc
+*.swp
+*~
+
+# Documentation
+/docs/
+
+# Maven Surefire
+*.dumpstream
+
+# Other
+*.bak
+*.tmp
+
+# Misc
+*.iml
+
+# Documentation
+/docs 
+
+HELP.md
