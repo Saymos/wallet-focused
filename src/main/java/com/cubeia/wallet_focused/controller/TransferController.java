@@ -3,6 +3,8 @@ package com.cubeia.wallet_focused.controller;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +27,8 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/accounts")
 @Tag(name = "Transfer", description = "Fund transfer operations")
 public class TransferController {
+    private static final Logger logger = LoggerFactory.getLogger(TransferController.class);
+    
     private final WalletService walletService;
 
     public TransferController(WalletService walletService) {
@@ -42,6 +46,10 @@ public class TransferController {
     })
     @PostMapping("/transfer")
     public ResponseEntity<Map<String, Object>> transfer(@Valid @RequestBody TransferRequest request) {
+        logger.info("Transfer request received: source={}, destination={}, amount={}, transactionId={}", 
+                request.getSourceAccountId(), request.getDestinationAccountId(), 
+                request.getAmount(), request.getTransactionId());
+        
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -53,15 +61,35 @@ public class TransferController {
                 response.put("transactionId", request.getTransactionId().toString());
             }
             
+            logger.info("Transfer completed successfully: transactionId={}", request.getTransactionId());
             return ResponseEntity.ok(response);
-        } catch (InsufficientFundsException | IllegalArgumentException e) {
+        } catch (InsufficientFundsException e) {
+            logger.warn("Transfer failed - Insufficient funds: source={}, amount={}, transactionId={}", 
+                    request.getSourceAccountId(), request.getAmount(), request.getTransactionId());
+            
             // Handle insufficient funds
             response.put("success", false);
             response.put("error", e.getMessage());
             
             return ResponseEntity.badRequest().body(response);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Transfer failed - Invalid request: {}, transactionId={}", 
+                    e.getMessage(), request.getTransactionId());
+            
+            // Handle invalid arguments
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            logger.error("Unexpected error during transfer: transactionId={}", 
+                    request.getTransactionId(), e);
+            
+            // Handle unexpected errors
+            response.put("success", false);
+            response.put("error", "An unexpected error occurred");
+            
+            return ResponseEntity.badRequest().body(response);
         }
-        // Handle validation errors
-        
     }
 } 

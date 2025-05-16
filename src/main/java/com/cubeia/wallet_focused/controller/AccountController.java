@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +27,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/api/v1/accounts")
 @Tag(name = "Account", description = "Account balance operations")
 public class AccountController {
+    private static final Logger logger = LoggerFactory.getLogger(AccountController.class);
+    
     private final AccountService accountService;
 
     public AccountController(AccountService accountService) {
@@ -40,21 +44,27 @@ public class AccountController {
     })
     @GetMapping("/{id}/balance")
     public ResponseEntity<Map<String, Object>> getBalance(@PathVariable("id") String id) {
+        logger.info("Balance request received for account ID: {}", id);
+        
         UUID accountId;
         try {
             accountId = UUID.fromString(id);
         } catch (IllegalArgumentException e) {
+            logger.warn("Invalid account ID format: {}", id);
             return ResponseEntity.badRequest().build();
         }
 
         Optional<Account> account = accountService.getAccount(accountId);
         if (account.isEmpty()) {
+            logger.info("Account not found: {}", accountId);
             return ResponseEntity.notFound().build();
         }
 
         Map<String, Object> response = new HashMap<>();
         response.put("accountId", account.get().getAccountId().toString());
         response.put("balance", account.get().getBalance());
+        
+        logger.info("Balance returned successfully for account: {}", accountId);
         return ResponseEntity.ok(response);
     }
 } 

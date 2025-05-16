@@ -26,6 +26,7 @@ class WalletServiceImplTest {
     private UUID destinationId;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         repository = new InMemoryWalletRepository();
         service = new WalletServiceImpl(repository);

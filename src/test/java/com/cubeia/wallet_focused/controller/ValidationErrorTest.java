@@ -57,6 +57,7 @@ public class ValidationErrorTest {
     private TransactionController transactionController;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         GlobalExceptionHandler exceptionHandler = new GlobalExceptionHandler();
         

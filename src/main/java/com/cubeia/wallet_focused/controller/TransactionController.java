@@ -3,6 +3,8 @@ package com.cubeia.wallet_focused.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +26,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/api/v1/accounts")
 @Tag(name = "Transaction", description = "Account transaction operations")
 public class TransactionController {
+    private static final Logger logger = LoggerFactory.getLogger(TransactionController.class);
+    
     private final TransactionService transactionService;
 
     public TransactionController(TransactionService transactionService) {
@@ -39,19 +43,24 @@ public class TransactionController {
     })
     @GetMapping("/{id}/transactions")
     public ResponseEntity<List<TransactionEntry>> getTransactions(@PathVariable("id") String id) {
+        logger.info("Transactions request received for account ID: {}", id);
+        
         UUID accountId;
         try {
             accountId = UUID.fromString(id);
         } catch (IllegalArgumentException e) {
+            logger.warn("Invalid account ID format: {}", id);
             return ResponseEntity.badRequest().build();
         }
 
         // Check if account exists
         if (!transactionService.accountExists(accountId)) {
+            logger.info("Account not found: {}", accountId);
             return ResponseEntity.notFound().build();
         }
 
         List<TransactionEntry> transactions = transactionService.getTransactionsByAccount(accountId);
+        logger.info("Retrieved {} transactions for account: {}", transactions.size(), accountId);
         return ResponseEntity.ok(transactions);
     }
 } 
