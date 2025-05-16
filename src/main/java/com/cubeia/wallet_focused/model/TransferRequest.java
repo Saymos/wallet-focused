@@ -4,9 +4,11 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
+@Valid
 @Schema(description = "Request object for fund transfer between accounts")
 public class TransferRequest {
     @NotNull(message = "Transaction ID is required")

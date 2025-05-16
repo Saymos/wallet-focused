@@ -44,7 +44,6 @@ public class TransferControllerTest {
     private BigDecimal amount;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(transferController).build();
         objectMapper = new ObjectMapper();

@@ -35,14 +35,15 @@ public class TransferController {
         this.walletService = walletService;
     }
 
-    @Operation(summary = "Transfer funds between accounts", 
+    @Operation(summary = "Transfer funds between accounts",
             description = "Transfers funds from source account to destination account using double-entry bookkeeping")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Transfer successful",
                     content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request (negative amount, same account, etc.)"),
             @ApiResponse(responseCode = "404", description = "Account not found"),
-            @ApiResponse(responseCode = "409", description = "Insufficient funds")
+            @ApiResponse(responseCode = "409", description = "Insufficient funds"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @PostMapping("/transfer")
     public ResponseEntity<Map<String, Object>> transfer(@Valid @RequestBody TransferRequest request) {
@@ -70,8 +71,8 @@ public class TransferController {
             // Handle insufficient funds
             response.put("success", false);
             response.put("error", e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
+
+            return ResponseEntity.status(409).body(response);
         } catch (IllegalArgumentException e) {
             logger.warn("Transfer failed - Invalid request: {}, transactionId={}", 
                     e.getMessage(), request.getTransactionId());
@@ -89,7 +90,7 @@ public class TransferController {
             response.put("success", false);
             response.put("error", "An unexpected error occurred");
             
-            return ResponseEntity.badRequest().body(response);
+            return ResponseEntity.status(500).body(response);
         }
     }
 } 

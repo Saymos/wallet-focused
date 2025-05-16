@@ -53,7 +53,7 @@ public class TransactionController {
             return ResponseEntity.badRequest().build();
         }
 
-        // Check if account exists
+        // Check if the account exists
         if (!transactionService.accountExists(accountId)) {
             logger.info("Account not found: {}", accountId);
             return ResponseEntity.notFound().build();

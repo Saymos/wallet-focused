@@ -31,10 +31,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public boolean accountExists(UUID accountId) {
-        logger.debug("Checking if account exists: accountId={}", accountId);
-        Account account = repository.findAccount(accountId);
-        boolean exists = account != null;
-        logger.debug("Account {} exists: {}", accountId, exists);
+        logger.debug("Verifying existence of account with ID: {}", accountId);
+        boolean exists = repository.findAccount(accountId) != null;
+        logger.debug("Existence check for account {}: {}", accountId, exists);
         return exists;
     }
 } 

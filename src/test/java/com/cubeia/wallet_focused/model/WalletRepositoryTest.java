@@ -16,7 +16,6 @@ class WalletRepositoryTest {
     private WalletRepository repo;
 
     @BeforeEach
-    @SuppressWarnings("unused")
     void setUp() {
         repo = new InMemoryWalletRepository();
     }

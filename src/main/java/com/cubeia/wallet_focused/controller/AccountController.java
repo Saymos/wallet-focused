@@ -37,8 +37,7 @@ public class AccountController {
 
     @Operation(summary = "Get account balance", description = "Retrieves the current balance for a specified account")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Account balance found",
-                    content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "200", description = "Account balance found", content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "400", description = "Invalid account ID format"),
             @ApiResponse(responseCode = "404", description = "Account not found")
     })
