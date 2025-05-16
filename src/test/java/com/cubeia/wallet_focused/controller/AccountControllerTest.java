@@ -34,6 +34,7 @@ class AccountControllerTest {
     private AccountController accountController;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(accountController).build();
     }

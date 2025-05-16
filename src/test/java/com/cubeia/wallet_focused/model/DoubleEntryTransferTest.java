@@ -17,6 +17,7 @@ class DoubleEntryTransferTest {
     private Account accountB;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         repo = new InMemoryWalletRepository();
         accountA = new Account(UUID.randomUUID(), new BigDecimal("100.00"));

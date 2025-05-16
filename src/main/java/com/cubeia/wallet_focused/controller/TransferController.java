@@ -18,10 +18,12 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
+@Tag(name = "Transfer", description = "Fund transfer operations")
 public class TransferController {
     private final WalletService walletService;
 
@@ -52,18 +54,14 @@ public class TransferController {
             }
             
             return ResponseEntity.ok(response);
-        } catch (InsufficientFundsException e) {
+        } catch (InsufficientFundsException | IllegalArgumentException e) {
             // Handle insufficient funds
             response.put("success", false);
             response.put("error", e.getMessage());
             
             return ResponseEntity.badRequest().body(response);
-        } catch (IllegalArgumentException e) {
-            // Handle validation errors
-            response.put("success", false);
-            response.put("error", e.getMessage());
-            
-            return ResponseEntity.badRequest().body(response);
         }
+        // Handle validation errors
+        
     }
 } 

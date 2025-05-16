@@ -18,9 +18,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
+@Tag(name = "Transaction", description = "Account transaction operations")
 public class TransactionController {
     private final TransactionService transactionService;
 

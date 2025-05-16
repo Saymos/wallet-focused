@@ -27,6 +27,7 @@ class WalletServiceConcurrencyTest {
     private UUID idB;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         repository = new InMemoryWalletRepository();
         service = new WalletServiceImpl(repository);

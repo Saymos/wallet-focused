@@ -43,6 +43,7 @@ class TransactionControllerTest {
     private List<TransactionEntry> transactions;
 
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(transactionController).build();
 
