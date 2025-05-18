@@ -34,9 +34,6 @@ public class TransferRequest {
             example = "100.00", required = true, minimum = "0.01")
     private BigDecimal amount;
 
-    public TransferRequest() {
-    }
-
     public TransferRequest(UUID transactionId, UUID sourceAccountId, UUID destinationAccountId, BigDecimal amount) {
         this.transactionId = transactionId;
         this.sourceAccountId = sourceAccountId;

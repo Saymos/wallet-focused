@@ -1,6 +1,5 @@
 package com.cubeia.wallet_focused.config;
 
-import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import com.cubeia.wallet_focused.config.GlobalExceptionHandler.ErrorResponse;
 import com.cubeia.wallet_focused.config.GlobalExceptionHandler.ValidationErrorResponse;
+import com.cubeia.wallet_focused.dto.ValidationErrorDTO;
 import com.cubeia.wallet_focused.model.InsufficientFundsException;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -112,11 +112,25 @@ public class GlobalExceptionHandlerTest {
         assertEquals("Validation failed for request parameters", error.getMessage());
         assertNotNull(error.getTimestamp());
         
-        Map<String, String> errors = error.getErrors();
-        assertNotNull(errors);
-        assertEquals(2, errors.size());
-        assertEquals("Amount must be positive", errors.get("amount"));
-        assertEquals("Transaction ID is required", errors.get("transactionId"));
+        ValidationErrorDTO validationErrors = error.getErrors();
+        assertNotNull(validationErrors);
+        assertEquals(2, validationErrors.getFieldErrors().size());
+        
+        boolean foundAmountError = false;
+        boolean foundTransactionIdError = false;
+        
+        for (ValidationErrorDTO.FieldError fieldError : validationErrors.getFieldErrors()) {
+            if ("amount".equals(fieldError.getField())) {
+                assertEquals("Amount must be positive", fieldError.getMessage());
+                foundAmountError = true;
+            } else if ("transactionId".equals(fieldError.getField())) {
+                assertEquals("Transaction ID is required", fieldError.getMessage());
+                foundTransactionIdError = true;
+            }
+        }
+        
+        assertTrue(foundAmountError, "Amount error should be present");
+        assertTrue(foundTransactionIdError, "Transaction ID error should be present");
     }
     
     @Test

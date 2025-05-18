@@ -259,4 +259,66 @@ class WalletServiceImplTest {
         // Verify transaction is marked as processed
         assertTrue(repository.isTransactionProcessed(transactionId));
     }
+    
+    @Test
+    void testUnexpectedExceptionDuringTransfer() {
+        // Create a test repository that will throw an unexpected exception only for new transactions
+        // but allow the setup transactions
+        InMemoryWalletRepository realRepo = new InMemoryWalletRepository();
+        WalletRepository mockRepository = new InMemoryWalletRepository() {
+            @Override
+            public void saveTransaction(TransactionEntry entry) {
+                // Deliberately throw a runtime exception when saving new transactions
+                // This will only be triggered during the actual transfer test
+                throw new RuntimeException("Simulated database failure");
+            }
+            
+            @Override
+            public List<TransactionEntry> findTransactionsByAccount(UUID accountId) {
+                // Delegate to the real repo for finding transactions
+                return realRepo.findTransactionsByAccount(accountId);
+            }
+        };
+        
+        // Initialize source and destination accounts in both repositories
+        UUID sourceAccountId = UUID.randomUUID();
+        UUID destinationAccountId = UUID.randomUUID();
+        
+        Account sourceAccount = new Account(sourceAccountId);
+        mockRepository.saveAccount(sourceAccount);
+        realRepo.saveAccount(sourceAccount);
+        
+        Account destAccount = new Account(destinationAccountId);
+        mockRepository.saveAccount(destAccount);
+        realRepo.saveAccount(destAccount);
+        
+        // Give source account sufficient funds using the real repo
+        TransactionEntry initialCredit = new TransactionEntry(
+            UUID.randomUUID(),
+            sourceAccountId,
+            SYSTEM_ACCOUNT_ID,
+            new BigDecimal("100.00"),
+            TransactionEntry.Type.CREDIT,
+            Instant.now()
+        );
+        
+        // Add the initial credit to the real repo
+        realRepo.saveTransaction(initialCredit);
+        
+        // Create our service with the mock repository
+        AccountService testAccountService = new AccountServiceImpl(mockRepository, null);
+        WalletService testService = new WalletServiceImpl(mockRepository, testAccountService);
+        
+        // Create transfer request with an amount the account can afford
+        UUID transactionId = UUID.randomUUID();
+        BigDecimal amount = new BigDecimal("50.00");
+        TransferRequest request = new TransferRequest(transactionId, sourceAccountId, destinationAccountId, amount);
+        
+        // Assert that the exception is propagated through the service layer
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            testService.transfer(request);
+        });
+        
+        assertEquals("Simulated database failure", exception.getMessage());
+    }
 } 

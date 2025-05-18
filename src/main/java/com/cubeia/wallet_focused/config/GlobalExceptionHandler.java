@@ -1,8 +1,6 @@
 package com.cubeia.wallet_focused.config;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import com.cubeia.wallet_focused.dto.ValidationErrorDTO;
 import com.cubeia.wallet_focused.model.InsufficientFundsException;
 
 import io.swagger.v3.oas.annotations.media.Content;
@@ -62,13 +61,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ApiResponse(responseCode = "400", description = "Validation errors", 
-                content = @Content(schema = @Schema(implementation = ValidationErrorResponse.class)))
+                content = @Content(schema = @Schema(implementation = ValidationErrorDTO.class)))
     public ResponseEntity<ValidationErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
+        ValidationErrorDTO validationErrors = new ValidationErrorDTO();
+        
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
+            validationErrors.addFieldError(fieldName, errorMessage);
         });
         
         ValidationErrorResponse response = new ValidationErrorResponse(
@@ -76,7 +76,7 @@ public class GlobalExceptionHandler {
                 "VALIDATION_ERROR",
                 "Validation failed for request parameters",
                 LocalDateTime.now(),
-                errors);
+                validationErrors);
         
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
@@ -136,16 +136,15 @@ public class GlobalExceptionHandler {
 
     @Schema(description = "Validation error response with field-specific errors")
     public static class ValidationErrorResponse extends ErrorResponse {
-        @Schema(description = "Field-specific validation errors", 
-                example = "{\"amount\":\"Amount must be positive\",\"transactionId\":\"Transaction ID is required\"}")
-        private final Map<String, String> errors;
+        @Schema(description = "Field-specific validation errors")
+        private final ValidationErrorDTO errors;
 
-        public ValidationErrorResponse(int status, String code, String message, LocalDateTime timestamp, Map<String, String> errors) {
+        public ValidationErrorResponse(int status, String code, String message, LocalDateTime timestamp, ValidationErrorDTO errors) {
             super(status, code, message, timestamp);
             this.errors = errors;
         }
 
-        public Map<String, String> getErrors() {
+        public ValidationErrorDTO getErrors() {
             return errors;
         }
     }

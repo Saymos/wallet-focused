@@ -28,7 +28,7 @@ public class TransactionEntryDTOTest {
         UUID accountId = UUID.randomUUID();
         UUID counterpartyId = UUID.randomUUID();
         BigDecimal amount = new BigDecimal("100.50");
-        String type = "CREDIT";
+        TransactionEntryDTO.Type type = TransactionEntryDTO.Type.CREDIT;
         Instant timestamp = Instant.now();
         
         // Act
@@ -52,7 +52,7 @@ public class TransactionEntryDTOTest {
         UUID accountId = UUID.randomUUID();
         UUID counterpartyId = UUID.randomUUID();
         BigDecimal amount = new BigDecimal("200.75");
-        String type = "DEBIT";
+        TransactionEntryDTO.Type type = TransactionEntryDTO.Type.DEBIT;
         Instant timestamp = Instant.now();
         
         // Act
@@ -73,7 +73,7 @@ public class TransactionEntryDTOTest {
     }
     
     @Test
-    public void testFromModel() {
+    public void testFromModelCredit() {
         // Arrange
         UUID transactionId = UUID.randomUUID();
         UUID accountId = UUID.randomUUID();
@@ -94,7 +94,34 @@ public class TransactionEntryDTOTest {
         assertEquals(accountId, dto.getAccountId());
         assertEquals(counterpartyId, dto.getCounterpartyId());
         assertEquals(amount, dto.getAmount());
-        assertEquals(type.toString(), dto.getType());
+        assertEquals(TransactionEntryDTO.Type.CREDIT, dto.getType());
+        assertEquals(timestamp, dto.getTimestamp());
+    }
+    
+    @Test
+    public void testFromModelDebit() {
+        // Arrange
+        UUID transactionId = UUID.randomUUID();
+        UUID accountId = UUID.randomUUID();
+        UUID counterpartyId = UUID.randomUUID();
+        BigDecimal amount = new BigDecimal("100.00");
+        TransactionEntry.Type type = TransactionEntry.Type.DEBIT;
+        Instant timestamp = Instant.now();
+        
+        TransactionEntry model = new TransactionEntry(
+            transactionId, accountId, counterpartyId, amount, type, timestamp
+        );
+        
+        // Act
+        TransactionEntryDTO dto = TransactionEntryDTO.fromModel(model);
+        
+        // Assert
+        assertNotNull(dto);
+        assertEquals(transactionId, dto.getTransactionId());
+        assertEquals(accountId, dto.getAccountId());
+        assertEquals(counterpartyId, dto.getCounterpartyId());
+        assertEquals(amount, dto.getAmount());
+        assertEquals(TransactionEntryDTO.Type.DEBIT, dto.getType());
         assertEquals(timestamp, dto.getTimestamp());
     }
 } 

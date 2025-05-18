@@ -2,6 +2,7 @@ package com.cubeia.wallet_focused.controller;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.cubeia.wallet_focused.dto.TransactionEntryDTO;
 import com.cubeia.wallet_focused.model.TransactionEntry;
 import com.cubeia.wallet_focused.service.TransactionService;
 
@@ -37,12 +39,12 @@ public class TransactionController {
     @Operation(summary = "Get transactions for account", description = "Retrieves all transaction entries for a specified account")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Transactions found",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionEntry.class)))),
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionEntryDTO.class)))),
             @ApiResponse(responseCode = "400", description = "Invalid account ID format"),
             @ApiResponse(responseCode = "404", description = "Account not found")
     })
     @GetMapping("/{id}/transactions")
-    public ResponseEntity<List<TransactionEntry>> getTransactions(@PathVariable("id") String id) {
+    public ResponseEntity<List<TransactionEntryDTO>> getTransactions(@PathVariable("id") String id) {
         logger.info("Transactions request received for account ID: {}", id);
         
         UUID accountId;
@@ -60,7 +62,13 @@ public class TransactionController {
         }
 
         List<TransactionEntry> transactions = transactionService.getTransactionsByAccount(accountId);
-        logger.info("Retrieved {} transactions for account: {}", transactions.size(), accountId);
-        return ResponseEntity.ok(transactions);
+        
+        // Convert model objects to DTOs
+        List<TransactionEntryDTO> transactionDTOs = transactions.stream()
+                .map(TransactionEntryDTO::fromModel)
+                .collect(Collectors.toList());
+        
+        logger.info("Retrieved {} transactions for account: {}", transactionDTOs.size(), accountId);
+        return ResponseEntity.ok(transactionDTOs);
     }
 } 
