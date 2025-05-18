@@ -162,13 +162,19 @@ The wallet service implements robust concurrency control mechanisms to ensure th
    - Accounts are locked based on UUID comparison (lexicographical order)
    - This prevents circular wait conditions that could lead to deadlocks
 
-3. **Thread-Safe Collections**
+3. **Spring @Transactional Support**
+   - Service methods are annotated with Spring's `@Transactional` for declarative transaction management
+   - All database operations within a transaction are atomic, consistent, isolated, and durable
+   - Read-only operations use `@Transactional(readOnly = true)` for performance optimization
+   - In a database-backed implementation, this would ensure all operations are properly committed or rolled back
+
+4. **Thread-Safe Collections**
    - All data structures are thread-safe:
      - `ConcurrentHashMap` for accounts and transaction storage
      - `CopyOnWriteArrayList` for transaction entries
      - Concurrent set for processed transaction IDs
 
-4. **Virtual Threads**
+5. **Virtual Threads**
    - Java 21 virtual threads are used for request handling
    - This provides improved scalability for I/O-bound operations
    - Configured via `spring.threads.virtual.enabled=true`
@@ -223,6 +229,7 @@ This implementation includes several shortcuts that would need to be addressed i
 ### In-Memory Storage
 
 - The current implementation uses in-memory storage (`ConcurrentHashMap`)
+- Service methods are annotated with `@Transactional` to ensure smooth transition to database storage
 - For production, a persistent database with ACID transactions would be required
 - The `WalletRepository` interface is designed to facilitate future database integration
 
