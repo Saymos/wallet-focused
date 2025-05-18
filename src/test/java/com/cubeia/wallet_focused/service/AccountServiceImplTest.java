@@ -28,15 +28,12 @@ public class AccountServiceImplTest {
     @Mock
     private WalletRepository repository;
     
-    @Mock
-    private TransactionService transactionService;
-    
     private AccountServiceImpl accountService;
     
     @BeforeEach
     public void setup() {
         MockitoAnnotations.openMocks(this);
-        accountService = new AccountServiceImpl(repository, transactionService);
+        accountService = new AccountServiceImpl(repository);
     }
     
     @Test

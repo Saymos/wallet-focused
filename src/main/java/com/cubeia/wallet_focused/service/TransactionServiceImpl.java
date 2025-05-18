@@ -6,8 +6,8 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.cubeia.wallet_focused.model.Account;
 import com.cubeia.wallet_focused.model.TransactionEntry;
 import com.cubeia.wallet_focused.model.WalletRepository;
 
@@ -22,6 +22,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<TransactionEntry> getTransactionsByAccount(UUID accountId) {
         logger.debug("Fetching transactions for account: accountId={}", accountId);
         List<TransactionEntry> transactions = repository.findTransactionsByAccount(accountId);
@@ -30,6 +31,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean accountExists(UUID accountId) {
         logger.debug("Verifying existence of account with ID: {}", accountId);
         boolean exists = repository.findAccount(accountId) != null;

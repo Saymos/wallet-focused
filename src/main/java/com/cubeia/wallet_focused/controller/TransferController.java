@@ -51,35 +51,35 @@ public class TransferController {
     @PostMapping("/accounts/transfer")
     public ResponseEntity<TransferResponseDTO> transfer(@Valid @RequestBody TransferRequestDTO requestDTO) {
         logger.info("Transfer request received: source={}, destination={}, amount={}, transactionId={}", 
-                requestDTO.getSourceAccountId(), requestDTO.getDestinationAccountId(), 
-                requestDTO.getAmount(), requestDTO.getTransactionId());
+                requestDTO.sourceAccountId(), requestDTO.destinationAccountId(), 
+                requestDTO.amount(), requestDTO.transactionId());
         
         try {
             // Convert DTO to domain model using the toModel method
             walletService.transfer(requestDTO.toModel());
             
             // Success response
-            TransferResponseDTO response = TransferResponseDTO.success(requestDTO.getTransactionId());
+            TransferResponseDTO response = TransferResponseDTO.success(requestDTO.transactionId());
             
-            logger.info("Transfer completed successfully: transactionId={}", requestDTO.getTransactionId());
+            logger.info("Transfer completed successfully: transactionId={}", requestDTO.transactionId());
             return ResponseEntity.ok(response);
         } catch (InsufficientFundsException e) {
             logger.warn("Transfer failed - Insufficient funds: source={}, amount={}, transactionId={}", 
-                    requestDTO.getSourceAccountId(), requestDTO.getAmount(), requestDTO.getTransactionId());
+                    requestDTO.sourceAccountId(), requestDTO.amount(), requestDTO.transactionId());
             
             // Handle insufficient funds
             TransferResponseDTO response = TransferResponseDTO.error(e.getMessage());
             return ResponseEntity.status(409).body(response);
         } catch (IllegalArgumentException e) {
             logger.warn("Transfer failed - Invalid request: {}, transactionId={}", 
-                    e.getMessage(), requestDTO.getTransactionId());
+                    e.getMessage(), requestDTO.transactionId());
             
             // Handle invalid arguments
             TransferResponseDTO response = TransferResponseDTO.error(e.getMessage());
             return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
             logger.error("Unexpected error during transfer: transactionId={}", 
-                    requestDTO.getTransactionId(), e);
+                    requestDTO.transactionId(), e);
             
             // Handle unexpected errors
             TransferResponseDTO response = TransferResponseDTO.error("An unexpected error occurred");

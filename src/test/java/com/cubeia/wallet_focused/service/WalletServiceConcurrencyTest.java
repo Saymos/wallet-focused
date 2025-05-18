@@ -30,7 +30,7 @@ class WalletServiceConcurrencyTest {
     @BeforeEach
     void setUp() {
         repository = new InMemoryWalletRepository();
-        accountService = new AccountServiceImpl(repository, null);
+        accountService = new AccountServiceImpl(repository);
         service = new WalletServiceImpl(repository, accountService);
         
         // Create system account (unlimited funds)

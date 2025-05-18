@@ -35,6 +35,6 @@ public class OpenApiConfigTest {
         assertNotNull(openAPI.getComponents().getSchemas().get("TransactionEntry"));
         assertNotNull(openAPI.getComponents().getSchemas().get("TransferRequestDTO"));
         assertNotNull(openAPI.getComponents().getSchemas().get("ErrorResponse"));
-        assertNotNull(openAPI.getComponents().getSchemas().get("ValidationErrorResponse"));
+        assertNotNull(openAPI.getComponents().getSchemas().get("ValidationErrorDTO"));
     }
 } 

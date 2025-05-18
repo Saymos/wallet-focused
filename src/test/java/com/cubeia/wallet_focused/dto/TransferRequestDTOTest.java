@@ -12,16 +12,7 @@ import com.cubeia.wallet_focused.model.TransferRequest;
 public class TransferRequestDTOTest {
 
     @Test
-    public void testDefaultConstructor() {
-        // Act
-        TransferRequestDTO dto = new TransferRequestDTO();
-        
-        // Assert
-        assertNotNull(dto);
-    }
-    
-    @Test
-    public void testParameterizedConstructor() {
+    public void testParameterizedConstructorAndFieldAccess() {
         // Arrange
         UUID transactionId = UUID.randomUUID();
         UUID sourceAccountId = UUID.randomUUID();
@@ -32,32 +23,10 @@ public class TransferRequestDTOTest {
         TransferRequestDTO dto = new TransferRequestDTO(transactionId, sourceAccountId, destinationAccountId, amount);
         
         // Assert
-        assertEquals(transactionId, dto.getTransactionId());
-        assertEquals(sourceAccountId, dto.getSourceAccountId());
-        assertEquals(destinationAccountId, dto.getDestinationAccountId());
-        assertEquals(amount, dto.getAmount());
-    }
-    
-    @Test
-    public void testSettersAndGetters() {
-        // Arrange
-        TransferRequestDTO dto = new TransferRequestDTO();
-        UUID transactionId = UUID.randomUUID();
-        UUID sourceAccountId = UUID.randomUUID();
-        UUID destinationAccountId = UUID.randomUUID();
-        BigDecimal amount = new BigDecimal("200.75");
-        
-        // Act
-        dto.setTransactionId(transactionId);
-        dto.setSourceAccountId(sourceAccountId);
-        dto.setDestinationAccountId(destinationAccountId);
-        dto.setAmount(amount);
-        
-        // Assert
-        assertEquals(transactionId, dto.getTransactionId());
-        assertEquals(sourceAccountId, dto.getSourceAccountId());
-        assertEquals(destinationAccountId, dto.getDestinationAccountId());
-        assertEquals(amount, dto.getAmount());
+        assertEquals(transactionId, dto.transactionId());
+        assertEquals(sourceAccountId, dto.sourceAccountId());
+        assertEquals(destinationAccountId, dto.destinationAccountId());
+        assertEquals(amount, dto.amount());
     }
     
     @Test

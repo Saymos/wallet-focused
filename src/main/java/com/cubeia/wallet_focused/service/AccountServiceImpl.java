@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.cubeia.wallet_focused.model.Account;
 import com.cubeia.wallet_focused.model.TransactionEntry;
@@ -25,20 +26,18 @@ public class AccountServiceImpl implements AccountService {
     private static final Logger logger = LoggerFactory.getLogger(AccountServiceImpl.class);
     
     private final WalletRepository repository;
-    private final TransactionService transactionService;
 
     /**
-     * Creates a new AccountServiceImpl with the specified repository and transaction service.
+     * Creates a new AccountServiceImpl with the specified repository.
      *
      * @param repository the wallet repository to use
-     * @param transactionService the transaction service to use for retrieving transaction history
      */
-    public AccountServiceImpl(WalletRepository repository, TransactionService transactionService) {
+    public AccountServiceImpl(WalletRepository repository) {
         this.repository = repository;
-        this.transactionService = transactionService;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Account> getAccount(UUID accountId) {
         logger.debug("Fetching account: accountId={}", accountId);
         Account account = repository.findAccount(accountId);
@@ -53,6 +52,7 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public BigDecimal calculateBalance(UUID accountId) {
         logger.debug("Calculating balance for account: accountId={}", accountId);
         

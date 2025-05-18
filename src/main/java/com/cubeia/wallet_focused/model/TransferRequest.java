@@ -52,10 +52,10 @@ public class TransferRequest {
             return null;
         }
         return new TransferRequest(
-            dto.getTransactionId(),
-            dto.getSourceAccountId(),
-            dto.getDestinationAccountId(),
-            dto.getAmount()
+            dto.transactionId(),
+            dto.sourceAccountId(),
+            dto.destinationAccountId(),
+            dto.amount()
         );
     }
 

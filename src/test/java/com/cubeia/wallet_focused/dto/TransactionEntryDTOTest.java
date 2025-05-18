@@ -13,16 +13,7 @@ import com.cubeia.wallet_focused.model.TransactionEntry;
 public class TransactionEntryDTOTest {
 
     @Test
-    public void testDefaultConstructor() {
-        // Act
-        TransactionEntryDTO dto = new TransactionEntryDTO();
-        
-        // Assert
-        assertNotNull(dto);
-    }
-    
-    @Test
-    public void testParameterizedConstructor() {
+    public void testParameterizedConstructorAndFieldAccess() {
         // Arrange
         UUID transactionId = UUID.randomUUID();
         UUID accountId = UUID.randomUUID();
@@ -36,40 +27,12 @@ public class TransactionEntryDTOTest {
             transactionId, accountId, counterpartyId, amount, type, timestamp);
         
         // Assert
-        assertEquals(transactionId, dto.getTransactionId());
-        assertEquals(accountId, dto.getAccountId());
-        assertEquals(counterpartyId, dto.getCounterpartyId());
-        assertEquals(amount, dto.getAmount());
-        assertEquals(type, dto.getType());
-        assertEquals(timestamp, dto.getTimestamp());
-    }
-    
-    @Test
-    public void testSettersAndGetters() {
-        // Arrange
-        TransactionEntryDTO dto = new TransactionEntryDTO();
-        UUID transactionId = UUID.randomUUID();
-        UUID accountId = UUID.randomUUID();
-        UUID counterpartyId = UUID.randomUUID();
-        BigDecimal amount = new BigDecimal("200.75");
-        TransactionEntryDTO.Type type = TransactionEntryDTO.Type.DEBIT;
-        Instant timestamp = Instant.now();
-        
-        // Act
-        dto.setTransactionId(transactionId);
-        dto.setAccountId(accountId);
-        dto.setCounterpartyId(counterpartyId);
-        dto.setAmount(amount);
-        dto.setType(type);
-        dto.setTimestamp(timestamp);
-        
-        // Assert
-        assertEquals(transactionId, dto.getTransactionId());
-        assertEquals(accountId, dto.getAccountId());
-        assertEquals(counterpartyId, dto.getCounterpartyId());
-        assertEquals(amount, dto.getAmount());
-        assertEquals(type, dto.getType());
-        assertEquals(timestamp, dto.getTimestamp());
+        assertEquals(transactionId, dto.transactionId());
+        assertEquals(accountId, dto.accountId());
+        assertEquals(counterpartyId, dto.counterpartyId());
+        assertEquals(amount, dto.amount());
+        assertEquals(type, dto.type());
+        assertEquals(timestamp, dto.timestamp());
     }
     
     @Test
@@ -90,12 +53,12 @@ public class TransactionEntryDTOTest {
         
         // Assert
         assertNotNull(dto);
-        assertEquals(transactionId, dto.getTransactionId());
-        assertEquals(accountId, dto.getAccountId());
-        assertEquals(counterpartyId, dto.getCounterpartyId());
-        assertEquals(amount, dto.getAmount());
-        assertEquals(TransactionEntryDTO.Type.CREDIT, dto.getType());
-        assertEquals(timestamp, dto.getTimestamp());
+        assertEquals(transactionId, dto.transactionId());
+        assertEquals(accountId, dto.accountId());
+        assertEquals(counterpartyId, dto.counterpartyId());
+        assertEquals(amount, dto.amount());
+        assertEquals(TransactionEntryDTO.Type.CREDIT, dto.type());
+        assertEquals(timestamp, dto.timestamp());
     }
     
     @Test
@@ -117,11 +80,11 @@ public class TransactionEntryDTOTest {
         
         // Assert
         assertNotNull(dto);
-        assertEquals(transactionId, dto.getTransactionId());
-        assertEquals(accountId, dto.getAccountId());
-        assertEquals(counterpartyId, dto.getCounterpartyId());
-        assertEquals(amount, dto.getAmount());
-        assertEquals(TransactionEntryDTO.Type.DEBIT, dto.getType());
-        assertEquals(timestamp, dto.getTimestamp());
+        assertEquals(transactionId, dto.transactionId());
+        assertEquals(accountId, dto.accountId());
+        assertEquals(counterpartyId, dto.counterpartyId());
+        assertEquals(amount, dto.amount());
+        assertEquals(TransactionEntryDTO.Type.DEBIT, dto.type());
+        assertEquals(timestamp, dto.timestamp());
     }
 } 

@@ -1,15 +1,16 @@
 # Wallet Service API
 
-A Java Spring Boot wallet service that implements basic bookkeeping (accounting) functionality for tracking funds, similar to a bank account. The service is built with a focus on correctness, thread safety, and clear API design.
+A Java Spring Boot wallet service that implements basic bookkeeping (accounting) functionality for tracking funds, similar to a bank account. The service is built with a focus on correctness, thread safety, and clear API design as specified in the PRD.
 
 ## Features
 
-- Double-entry bookkeeping for all transactions
-- Thread-safe concurrent transfers with deadlock prevention
-- Idempotent operations using transaction IDs
-- Comprehensive validation and error handling
-- API documentation via Swagger UI
-- Virtual threads support (Java 21)
+- **Double-entry bookkeeping** for all transactions, ensuring financial consistency
+- **Thread-safe concurrent operations** with deadlock prevention through consistent lock ordering
+- **Idempotent transfers** using transaction IDs to prevent duplicate processing
+- **Implicit account creation** when an account receives its first transfer
+- **Comprehensive validation and error handling** with appropriate HTTP status codes
+- **API documentation** via Swagger UI
+- **Virtual threads support** (Java 21) for improved concurrency and performance
 
 ## Technology Stack
 
@@ -54,7 +55,7 @@ The application will start on port 8080 by default.
 
 Swagger UI is available at: http://localhost:8080/swagger-ui.html
 
-The API consists of three main endpoints:
+The API consists of three main endpoints as specified in the PRD:
 
 1. **Get Account Balance**: `GET /api/v1/accounts/{id}/balance`
 2. **Transfer Funds**: `POST /api/v1/accounts/transfer`
@@ -66,6 +67,14 @@ The API consists of three main endpoints:
 
 ```bash
 curl -X GET http://localhost:8080/api/v1/accounts/{accountId}/balance
+```
+
+Response:
+```json
+{
+  "accountId": "123e4567-e89b-12d3-a456-426614174001",
+  "balance": 100.00
+}
 ```
 
 #### Transfer Funds
@@ -81,10 +90,40 @@ curl -X POST http://localhost:8080/api/v1/accounts/transfer \
   }'
 ```
 
+Response:
+```json
+{
+  "success": true,
+  "transactionId": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
 #### List Transactions
 
 ```bash
 curl -X GET http://localhost:8080/api/v1/accounts/{accountId}/transactions
+```
+
+Response:
+```json
+[
+  {
+    "transactionId": "123e4567-e89b-12d3-a456-426614174000",
+    "accountId": "123e4567-e89b-12d3-a456-426614174001",
+    "counterpartyId": "123e4567-e89b-12d3-a456-426614174002",
+    "amount": 100.00,
+    "type": "DEBIT",
+    "timestamp": "2025-05-18T16:22:10.914Z"
+  },
+  {
+    "transactionId": "456e7890-e89b-12d3-a456-426614174001",
+    "accountId": "123e4567-e89b-12d3-a456-426614174001",
+    "counterpartyId": "789e0123-e89b-12d3-a456-426614174003",
+    "amount": 50.00,
+    "type": "CREDIT",
+    "timestamp": "2025-05-18T16:24:15.782Z"
+  }
+]
 ```
 
 ## Design Decisions
@@ -110,27 +149,72 @@ The wallet service uses a combination of double-entry bookkeeping and event sour
      - **Reconciliation job**: Background process that regularly verifies and fixes any discrepancies
    - This pattern balances consistency (event sourcing) with performance (projection)
 
-🧠 **Bonus Insight**: Many financial systems use both approaches simultaneously. They maintain derived balances for authority and audits, while using cached balances for fast reads. The cached balances are regularly reconciled against the derived values to ensure consistency.
-
 ### Thread Safety & Concurrency
 
-- Uses Java's `ReentrantLock` for account-level locking
-- Implements consistent lock ordering to prevent deadlocks (acquiring locks by UUID comparison)
-- All collection classes are thread-safe (ConcurrentHashMap, CopyOnWriteArrayList)
-- Virtual threads (Java 21) are used for request handling to improve scalability
+The wallet service implements robust concurrency control mechanisms to ensure thread safety:
+
+1. **Account-Level Locking**
+   - Each account has its own `ReentrantLock` to prevent concurrent modifications
+   - Locks are managed in a thread-safe `ConcurrentHashMap`
+
+2. **Deadlock Prevention**
+   - Transfer operations that involve two accounts acquire locks in a consistent order
+   - Accounts are locked based on UUID comparison (lexicographical order)
+   - This prevents circular wait conditions that could lead to deadlocks
+
+3. **Thread-Safe Collections**
+   - All data structures are thread-safe:
+     - `ConcurrentHashMap` for accounts and transaction storage
+     - `CopyOnWriteArrayList` for transaction entries
+     - Concurrent set for processed transaction IDs
+
+4. **Virtual Threads**
+   - Java 21 virtual threads are used for request handling
+   - This provides improved scalability for I/O-bound operations
+   - Configured via `spring.threads.virtual.enabled=true`
 
 ### Idempotency
 
 The service guarantees idempotency for transfers using transaction IDs:
 
-- Each transfer has a unique transaction ID provided by the client
-- The system tracks processed transaction IDs to ensure a transaction is applied only once
-- Duplicate transfer requests with the same transaction ID are safely ignored
+1. **Unique Transaction IDs**
+   - Each transfer requires a client-provided UUID as the transaction ID
+   - The system tracks processed transaction IDs in a thread-safe set
+
+2. **Duplicate Detection**
+   - Before processing a transfer, the system checks if the transaction ID is already processed
+   - Duplicate requests return success without re-applying the transfer
+   - This ensures the same operation is never applied twice, even if the client retries
+
+3. **Implementation Details**
+   - Uses `Collections.newSetFromMap(new ConcurrentHashMap<>())` for thread-safe storage
+   - Transaction IDs are stored indefinitely (in this implementation)
+   - In production, a time-based expiration strategy would be implemented
+
+### Validation and Error Handling
+
+The service implements comprehensive validation and structured error handling:
+
+1. **Input Validation**
+   - Bean Validation annotations on DTOs (e.g., `@NotNull`, `@Positive`)
+   - Custom validation logic in service layer (e.g., no self-transfers, sufficient funds)
+
+2. **HTTP Status Codes**
+   - 200 OK: Successful operation
+   - 400 Bad Request: Invalid input (negative amount, same source/destination, invalid UUID)
+   - 404 Not Found: Account not found
+   - 409 Conflict: Insufficient funds
+   - 500 Internal Server Error: Unexpected errors
+
+3. **Structured Error Responses**
+   - Consistent JSON format for all errors
+   - Includes error message, status code, and timestamp
+   - For validation errors, includes details about each field error
 
 ### Account Creation
 
 - Accounts are created implicitly when they are the destination of a transfer
-- No explicit "create account" endpoint is provided
+- No explicit "create account" endpoint is provided, as per the PRD's optional nature of this feature
 
 ## Implementation Shortcuts & Production Considerations
 
@@ -140,28 +224,40 @@ This implementation includes several shortcuts that would need to be addressed i
 
 - The current implementation uses in-memory storage (`ConcurrentHashMap`)
 - For production, a persistent database with ACID transactions would be required
+- The `WalletRepository` interface is designed to facilitate future database integration
 
 ### Cluster Scalability
 
 - The current locking mechanism works for a single instance but not for multiple instances
-- A production solution would require distributed locking (e.g., Redis, ZooKeeper) or database-level transactions
+- A production solution would require:
+  - Distributed locking (e.g., Redis, ZooKeeper)
+  - Database-level transactions and constraints
+  - Optimistic concurrency control
 
 ### Security
 
 - No authentication or authorization is implemented
-- Production would require OAuth2/JWT authentication and role-based access control
+- Production would require:
+  - OAuth2/JWT authentication
+  - Role-based access control
+  - API rate limiting
+  - Request signing for sensitive operations
 
 ### Monitoring and Metrics
 
 - Basic logging is implemented, but production would need:
   - Centralized logging (ELK stack)
   - Metrics collection (Prometheus/Grafana)
-  - Distributed tracing
+  - Distributed tracing (Zipkin/Jaeger)
+  - Alerting and monitoring
 
 ### Pagination
 
 - The transactions endpoint returns all transactions without pagination
-- Production would need pagination for performance with large datasets
+- Production would need:
+  - Offset/limit or cursor-based pagination
+  - Sorting options
+  - Filtering capabilities
 
 ## Testing
 
@@ -179,7 +275,8 @@ Test coverage includes:
 - Unit tests for models and repositories
 - Service-level tests for transfer logic, idempotency, and concurrent access
 - Controller tests with MockMvc for API validation
-- Comprehensive validation test cases
+- Concurrency tests to verify thread safety and deadlock prevention
+- Validation tests for error handling
 
 ## License
 

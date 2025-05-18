@@ -1,151 +1,163 @@
 package com.cubeia.wallet_focused.config;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.cubeia.wallet_focused.dto.ValidationErrorDTO;
 import com.cubeia.wallet_focused.model.InsufficientFundsException;
 
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.persistence.EntityNotFoundException;
 
+/**
+ * Global exception handler for the application.
+ * Provides consistent error responses for different types of exceptions.
+ */
 @ControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(InsufficientFundsException.class)
-    @ApiResponse(responseCode = "400", description = "Insufficient funds in source account", 
-                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<ErrorResponse> handleInsufficientFundsException(InsufficientFundsException ex) {
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "INSUFFICIENT_FUNDS",
-                ex.getMessage(),
-                LocalDateTime.now());
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    @ApiResponse(responseCode = "400", description = "Invalid request parameters", 
-                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "INVALID_REQUEST",
-                ex.getMessage(),
-                LocalDateTime.now());
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(EntityNotFoundException.class)
-    @ApiResponse(responseCode = "404", description = "Requested resource not found", 
-                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.NOT_FOUND.value(),
-                "RESOURCE_NOT_FOUND",
-                ex.getMessage(),
-                LocalDateTime.now());
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ApiResponse(responseCode = "400", description = "Validation errors", 
-                content = @Content(schema = @Schema(implementation = ValidationErrorDTO.class)))
-    public ResponseEntity<ValidationErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        ValidationErrorDTO validationErrors = new ValidationErrorDTO();
-        
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            validationErrors.addFieldError(fieldName, errorMessage);
-        });
-        
-        ValidationErrorResponse response = new ValidationErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "VALIDATION_ERROR",
-                "Validation failed for request parameters",
-                LocalDateTime.now(),
-                validationErrors);
-        
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(Exception.class)
-    @ApiResponse(responseCode = "500", description = "Internal server error", 
-                content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex) {
-        logger.error("Unhandled exception occurred", ex);
-        
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                "INTERNAL_SERVER_ERROR",
-                "An unexpected error occurred. Please try again later.",
-                LocalDateTime.now());
-        
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @Schema(description = "Standard error response")
+    /**
+     * Error response structure.
+     */
     public static class ErrorResponse {
-        @Schema(description = "HTTP status code", example = "400")
-        private final int status;
-        
-        @Schema(description = "Error code", example = "INSUFFICIENT_FUNDS")
-        private final String code;
-        
-        @Schema(description = "Error message", example = "Insufficient funds in source account")
-        private final String message;
-        
-        @Schema(description = "Timestamp of when the error occurred", example = "2025-01-15T12:34:56.789")
-        private final LocalDateTime timestamp;
+        private String timestamp;
+        private int status;
+        private String error;
+        private String message;
+        private String path;
 
-        public ErrorResponse(int status, String code, String message, LocalDateTime timestamp) {
-            this.status = status;
-            this.code = code;
+        public ErrorResponse(String message, String error, int status, String path) {
+            this.timestamp = LocalDateTime.now().toString();
             this.message = message;
-            this.timestamp = timestamp;
+            this.error = error;
+            this.status = status;
+            this.path = path;
+        }
+
+        public String getTimestamp() {
+            return timestamp;
         }
 
         public int getStatus() {
             return status;
         }
 
-        public String getCode() {
-            return code;
+        public String getError() {
+            return error;
         }
 
         public String getMessage() {
             return message;
         }
 
-        public LocalDateTime getTimestamp() {
-            return timestamp;
+        public String getPath() {
+            return path;
         }
     }
 
-    @Schema(description = "Validation error response with field-specific errors")
-    public static class ValidationErrorResponse extends ErrorResponse {
-        @Schema(description = "Field-specific validation errors")
-        private final ValidationErrorDTO errors;
-
-        public ValidationErrorResponse(int status, String code, String message, LocalDateTime timestamp, ValidationErrorDTO errors) {
-            super(status, code, message, timestamp);
-            this.errors = errors;
+    /**
+     * Handle validation errors from request body validation.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ValidationErrorDTO> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        logger.warn("Validation error: {}", ex.getMessage());
+        
+        BindingResult result = ex.getBindingResult();
+        List<ValidationErrorDTO.FieldError> fieldErrors = new ArrayList<>();
+        
+        for (FieldError fieldError : result.getFieldErrors()) {
+            String fieldName = fieldError.getField();
+            String errorMessage = fieldError.getDefaultMessage();
+            fieldErrors.add(new ValidationErrorDTO.FieldError(fieldName, errorMessage));
         }
+        
+        ValidationErrorDTO validationErrors = new ValidationErrorDTO(fieldErrors);
+        
+        return ResponseEntity.badRequest().body(validationErrors);
+    }
 
-        public ValidationErrorDTO getErrors() {
-            return errors;
-        }
+    /**
+     * Handle EntityNotFoundException.
+     */
+    @ExceptionHandler(EntityNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex) {
+        logger.warn("Entity not found: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                "Not Found",
+                HttpStatus.NOT_FOUND.value(),
+                null
+        );
+        
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+    
+    /**
+     * Handle InsufficientFundsException.
+     */
+    @ExceptionHandler(InsufficientFundsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ResponseEntity<ErrorResponse> handleInsufficientFunds(InsufficientFundsException ex) {
+        logger.warn("Insufficient funds: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                "Insufficient Funds",
+                HttpStatus.CONFLICT.value(),
+                null
+        );
+        
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+    
+    /**
+     * Handle IllegalArgumentException.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        logger.warn("Invalid argument: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                ex.getMessage(),
+                "Bad Request",
+                HttpStatus.BAD_REQUEST.value(),
+                null
+        );
+        
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+    
+    /**
+     * Fallback handler for unexpected exceptions.
+     */
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<ErrorResponse> handleException(Exception ex) {
+        logger.error("Unexpected error", ex);
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                "An unexpected error occurred",
+                "Internal Server Error",
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                null
+        );
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 } 

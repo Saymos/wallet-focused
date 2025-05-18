@@ -22,7 +22,7 @@ class WalletRepositoryTest {
     @BeforeEach
     void setUp() {
         repo = new InMemoryWalletRepository();
-        accountService = new AccountServiceImpl(repo, null);
+        accountService = new AccountServiceImpl(repo);
     }
 
     @Test

@@ -23,62 +23,47 @@ import static com.cubeia.wallet_focused.service.TestConstants.SYSTEM_ACCOUNT_ID;
 class WalletServiceImplTest {
     private WalletRepository repository;
     private AccountService accountService;
-    private WalletService service;
+    private WalletServiceImpl service;
     private UUID sourceId;
     private UUID destinationId;
+    private BigDecimal initialSourceBalance;
 
     @BeforeEach
     void setUp() {
         repository = new InMemoryWalletRepository();
-        accountService = new AccountServiceImpl(repository, null);
+        accountService = new AccountServiceImpl(repository);
         service = new WalletServiceImpl(repository, accountService);
         
-        // Create system account (unlimited funds)
-        repository.saveAccount(new Account(SYSTEM_ACCOUNT_ID));
-        
-        // Create initial credit to system account
-        Instant now = Instant.now();
-        TransactionEntry systemCredit = new TransactionEntry(
-            UUID.randomUUID(),
-            SYSTEM_ACCOUNT_ID,
-            SYSTEM_ACCOUNT_ID,
-            new BigDecimal("1000000.00"),
-            TransactionEntry.Type.CREDIT,
-            now
-        );
-        repository.saveTransaction(systemCredit);
-        
-        // Create test accounts
+        // Set up test accounts
         sourceId = UUID.randomUUID();
         destinationId = UUID.randomUUID();
+        initialSourceBalance = new BigDecimal("500.00");
         
+        // Create the accounts directly
+        repository.saveAccount(new Account(SYSTEM_ACCOUNT_ID));
         repository.saveAccount(new Account(sourceId));
         repository.saveAccount(new Account(destinationId));
         
-        // Initialize account balances with transfers from system account
-        TransferRequest sourceInitialTransfer = new TransferRequest(
-            UUID.randomUUID(),
+        // Add balance to source account directly
+        UUID initialCreditTxId = UUID.randomUUID();
+        repository.saveTransaction(new TransactionEntry(
+            initialCreditTxId,
+            sourceId,
+            SYSTEM_ACCOUNT_ID,
+            initialSourceBalance,
+            TransactionEntry.Type.CREDIT,
+            Instant.now()
+        ));
+        
+        // Also add the corresponding debit to system account for consistency
+        repository.saveTransaction(new TransactionEntry(
+            initialCreditTxId,
             SYSTEM_ACCOUNT_ID,
             sourceId,
-            new BigDecimal("100.00")
-        );
-        
-        TransferRequest destInitialTransfer = new TransferRequest(
-            UUID.randomUUID(),
-            SYSTEM_ACCOUNT_ID,
-            destinationId,
-            new BigDecimal("50.00")
-        );
-        
-        service.transfer(sourceInitialTransfer);
-        service.transfer(destInitialTransfer);
-        
-        // Verify initial balances are correct
-        BigDecimal sourceBalance = accountService.calculateBalance(sourceId);
-        BigDecimal destBalance = accountService.calculateBalance(destinationId);
-        
-        assertEquals(new BigDecimal("100.00"), sourceBalance);
-        assertEquals(new BigDecimal("50.00"), destBalance);
+            initialSourceBalance,
+            TransactionEntry.Type.DEBIT,
+            Instant.now()
+        ));
     }
     
     @Test
@@ -93,8 +78,8 @@ class WalletServiceImplTest {
         BigDecimal sourceBalance = accountService.calculateBalance(sourceId);
         BigDecimal destBalance = accountService.calculateBalance(destinationId);
         
-        assertEquals(new BigDecimal("70.00"), sourceBalance);
-        assertEquals(new BigDecimal("80.00"), destBalance);
+        assertEquals(new BigDecimal("470.00"), sourceBalance);
+        assertEquals(new BigDecimal("30.00"), destBalance);
         
         // Check transaction entries
         List<TransactionEntry> sourceTxs = repository.findTransactionsByAccount(sourceId);
@@ -102,11 +87,11 @@ class WalletServiceImplTest {
         
         // Each account should have 2 entries (1 from setup + 1 from test)
         assertEquals(2, sourceTxs.size());
-        assertEquals(2, destTxs.size());
+        assertEquals(1, destTxs.size());
         
         // Get the last transaction entry (the one from the test)
         TransactionEntry debit = sourceTxs.get(1);
-        TransactionEntry credit = destTxs.get(1);
+        TransactionEntry credit = destTxs.get(0);
         
         assertEquals(TransactionEntry.Type.DEBIT, debit.getType());
         assertEquals(TransactionEntry.Type.CREDIT, credit.getType());
@@ -137,7 +122,7 @@ class WalletServiceImplTest {
     @Test
     void testInsufficientFunds() {
         UUID transactionId = UUID.randomUUID();
-        BigDecimal amount = new BigDecimal("150.00"); // More than source has
+        BigDecimal amount = new BigDecimal("1500.00"); // More than source has
         
         TransferRequest request = new TransferRequest(transactionId, sourceId, destinationId, amount);
         
@@ -149,8 +134,8 @@ class WalletServiceImplTest {
         BigDecimal sourceBalance = accountService.calculateBalance(sourceId);
         BigDecimal destBalance = accountService.calculateBalance(destinationId);
         
-        assertEquals(new BigDecimal("100.00"), sourceBalance);
-        assertEquals(new BigDecimal("50.00"), destBalance);
+        assertEquals(new BigDecimal("500.00"), sourceBalance);
+        assertEquals(BigDecimal.ZERO, destBalance);
     }
     
     @Test
@@ -206,8 +191,8 @@ class WalletServiceImplTest {
         BigDecimal sourceBalanceAfterFirst = accountService.calculateBalance(sourceId);
         BigDecimal destBalanceAfterFirst = accountService.calculateBalance(destinationId);
         
-        assertEquals(new BigDecimal("75.00"), sourceBalanceAfterFirst);
-        assertEquals(new BigDecimal("75.00"), destBalanceAfterFirst);
+        assertEquals(new BigDecimal("475.00"), sourceBalanceAfterFirst);
+        assertEquals(new BigDecimal("25.00"), destBalanceAfterFirst);
         
         // Execute the same transfer (same transaction ID) again
         service.transfer(request);
@@ -217,15 +202,16 @@ class WalletServiceImplTest {
         BigDecimal destBalanceAfterSecond = accountService.calculateBalance(destinationId);
         
         // Balances should remain the same (idempotency)
-        assertEquals(new BigDecimal("75.00"), sourceBalanceAfterSecond);
-        assertEquals(new BigDecimal("75.00"), destBalanceAfterSecond);
+        assertEquals(new BigDecimal("475.00"), sourceBalanceAfterSecond);
+        assertEquals(new BigDecimal("25.00"), destBalanceAfterSecond);
         
-        // Each account should have 3 entries (1 from setup + 1 from test + 0 from second attempt)
+        // Source account should have 2 entries (1 from setup + 1 from test)
+        // Destination account should have 1 entry
         List<TransactionEntry> sourceTxs = repository.findTransactionsByAccount(sourceId);
         List<TransactionEntry> destTxs = repository.findTransactionsByAccount(destinationId);
         
         assertEquals(2, sourceTxs.size());
-        assertEquals(2, destTxs.size());
+        assertEquals(1, destTxs.size());
         
         // Verify the transaction entries match the single transfer
         TransactionEntry debit = null;
@@ -306,7 +292,7 @@ class WalletServiceImplTest {
         realRepo.saveTransaction(initialCredit);
         
         // Create our service with the mock repository
-        AccountService testAccountService = new AccountServiceImpl(mockRepository, null);
+        AccountService testAccountService = new AccountServiceImpl(mockRepository);
         WalletService testService = new WalletServiceImpl(mockRepository, testAccountService);
         
         // Create transfer request with an amount the account can afford

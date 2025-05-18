@@ -4,8 +4,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.cubeia.wallet_focused.config.GlobalExceptionHandler.ErrorResponse;
-import com.cubeia.wallet_focused.config.GlobalExceptionHandler.ValidationErrorResponse;
 import com.cubeia.wallet_focused.dto.TransferRequestDTO;
+import com.cubeia.wallet_focused.dto.ValidationErrorDTO;
 import com.cubeia.wallet_focused.model.Account;
 import com.cubeia.wallet_focused.model.TransactionEntry;
 
@@ -33,7 +33,7 @@ public class OpenApiConfig {
                         .addSchemas("TransactionEntry", new Schema<TransactionEntry>().$ref(TransactionEntry.class.getSimpleName()))
                         .addSchemas("TransferRequestDTO", new Schema<TransferRequestDTO>().$ref(TransferRequestDTO.class.getSimpleName()))
                         .addSchemas("ErrorResponse", new Schema<ErrorResponse>().$ref(ErrorResponse.class.getSimpleName()))
-                        .addSchemas("ValidationErrorResponse", new Schema<ValidationErrorResponse>().$ref(ValidationErrorResponse.class.getSimpleName()))
+                        .addSchemas("ValidationErrorDTO", new Schema<ValidationErrorDTO>().$ref(ValidationErrorDTO.class.getSimpleName()))
                 );
     }
 } 

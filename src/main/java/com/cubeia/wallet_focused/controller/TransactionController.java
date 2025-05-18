@@ -2,7 +2,6 @@ package com.cubeia.wallet_focused.controller;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,7 +65,7 @@ public class TransactionController {
         // Convert model objects to DTOs
         List<TransactionEntryDTO> transactionDTOs = transactions.stream()
                 .map(TransactionEntryDTO::fromModel)
-                .collect(Collectors.toList());
+                .toList();
         
         logger.info("Retrieved {} transactions for account: {}", transactionDTOs.size(), accountId);
         return ResponseEntity.ok(transactionDTOs);

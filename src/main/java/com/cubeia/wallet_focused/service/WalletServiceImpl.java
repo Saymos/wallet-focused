@@ -10,6 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.cubeia.wallet_focused.model.Account;
 import com.cubeia.wallet_focused.model.InsufficientFundsException;
@@ -52,6 +53,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public void transfer(TransferRequest request) {
         logger.info("Starting transfer operation: transactionId={}, sourceAccountId={}, destinationAccountId={}, amount={}",
                 request.getTransactionId(), request.getSourceAccountId(), request.getDestinationAccountId(), request.getAmount());

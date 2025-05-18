@@ -27,7 +27,7 @@ class DoubleEntryTransferTest {
     @BeforeEach
     void setUp() {
         repo = new InMemoryWalletRepository();
-        accountService = new AccountServiceImpl(repo, null);
+        accountService = new AccountServiceImpl(repo);
         walletService = new WalletServiceImpl(repo, accountService);
         
         // Create system account with initial funds
