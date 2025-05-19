@@ -11,10 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.cubeia.wallet_focused.model.Account;
+import com.cubeia.wallet_focused.model.EntityNotFoundException;
 import com.cubeia.wallet_focused.model.TransactionEntry;
 import com.cubeia.wallet_focused.model.WalletRepository;
-
-import jakarta.persistence.EntityNotFoundException;
 
 /**
  * Implementation of the AccountService interface.

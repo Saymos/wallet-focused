@@ -16,9 +16,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.cubeia.wallet_focused.dto.ValidationErrorDTO;
+import com.cubeia.wallet_focused.model.EntityNotFoundException;
 import com.cubeia.wallet_focused.model.InsufficientFundsException;
-
-import jakarta.persistence.EntityNotFoundException;
 
 /**
  * Global exception handler for the application.

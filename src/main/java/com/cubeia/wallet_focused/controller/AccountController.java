@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.cubeia.wallet_focused.dto.AccountDTO;
 import com.cubeia.wallet_focused.model.Account;
+import com.cubeia.wallet_focused.model.EntityNotFoundException;
 import com.cubeia.wallet_focused.service.AccountService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,7 +23,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.persistence.EntityNotFoundException;
 
 /**
  * REST controller for account-related operations.

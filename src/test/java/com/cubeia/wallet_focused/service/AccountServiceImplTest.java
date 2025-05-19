@@ -16,12 +16,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.cubeia.wallet_focused.model.Account;
+import com.cubeia.wallet_focused.model.EntityNotFoundException;
 import com.cubeia.wallet_focused.model.TransactionEntry;
 import com.cubeia.wallet_focused.model.WalletRepository;
-
-import jakarta.persistence.EntityNotFoundException;
 
 public class AccountServiceImplTest {
 

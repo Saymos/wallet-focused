@@ -14,9 +14,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import com.cubeia.wallet_focused.dto.ValidationErrorDTO;
+import com.cubeia.wallet_focused.model.EntityNotFoundException;
 import com.cubeia.wallet_focused.model.InsufficientFundsException;
-
-import jakarta.persistence.EntityNotFoundException;
 
 class GlobalExceptionHandlerTest {
 

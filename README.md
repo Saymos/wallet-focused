@@ -15,7 +15,7 @@ A Java Spring Boot wallet service that implements basic bookkeeping (accounting)
 ## Technology Stack
 
 - Java 21
-- Spring Boot 3.4.5
+- Spring Boot 3.2.5
 - Spring Validation
 - SLF4J/Logback for logging
 - Springdoc OpenAPI for API documentation
@@ -50,6 +50,15 @@ java -jar target/wallet-focused-0.1.0-SNAPSHOT.jar
 ```
 
 The application will start on port 8080 by default.
+
+## Testing with the Admin Account
+
+For convenience, the application initializes with a special admin account that has 1 million in funds:
+
+- **Admin Account UUID**: `00000000-0000-0000-0000-000000000000`
+- **Initial Balance**: 1,000,000.00
+
+You can use this account as a source for transfers when testing the API, which enables easy creation of new accounts without needing to set up initial funds through other means.
 
 ## API Documentation
 
@@ -126,6 +135,23 @@ Response:
 ]
 ```
 
+#### Using the Admin Account for Testing
+
+To create a new account using the admin account:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/accounts/transfer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transactionId": "00000000-1111-2222-3333-444444444444",
+    "sourceAccountId": "00000000-0000-0000-0000-000000000000", 
+    "destinationAccountId": "11111111-1111-1111-1111-111111111111",
+    "amount": 10000.00
+  }'
+```
+
+This creates a new account with ID `11111111-1111-1111-1111-111111111111` containing 10,000.00 in funds.
+
 ## Design Decisions
 
 ### Double-Entry Bookkeeping and Event Sourcing
@@ -196,6 +222,7 @@ The service guarantees idempotency for transfers using transaction IDs:
    - Uses `Collections.newSetFromMap(new ConcurrentHashMap<>())` for thread-safe storage
    - Transaction IDs are stored indefinitely (in this implementation)
    - In production, a time-based expiration strategy would be implemented
+   - This implemetentation would not be be sufficient in a clustered environment 
 
 ### Validation and Error Handling
 
@@ -221,6 +248,7 @@ The service implements comprehensive validation and structured error handling:
 
 - Accounts are created implicitly when they are the destination of a transfer
 - No explicit "create account" endpoint is provided, as per the PRD's optional nature of this feature
+- The admin account (UUID `00000000-0000-0000-0000-000000000000`) is automatically created at application startup to facilitate testing
 
 ## Implementation Shortcuts & Production Considerations
 
@@ -240,6 +268,16 @@ This implementation includes several shortcuts that would need to be addressed i
   - Distributed locking (e.g., Redis, ZooKeeper)
   - Database-level transactions and constraints
   - Optimistic concurrency control
+
+### Currency Handling
+
+- The implementation assumes all accounts operate in a single currency
+- No explicit currency validation or currency mismatch checks are implemented
+- For production, a more robust solution would include:
+  - Currency as a property of each account
+  - Validation to ensure transfers only occur between accounts with matching currencies
+  - Support for currency conversion with appropriate exchange rates
+  - Specific exceptions for currency mismatch scenarios
 
 ### Security
 
@@ -265,6 +303,12 @@ This implementation includes several shortcuts that would need to be addressed i
   - Offset/limit or cursor-based pagination
   - Sorting options
   - Filtering capabilities
+
+### Admin Account
+
+- The admin account with UUID `00000000-0000-0000-0000-000000000000` is a convenience feature for testing
+- In production, this would likely be replaced with a proper account creation flow and authentication system
+- The initial balance of 1,000,000.00 should be adjusted or removed in production
 
 ## Testing
 

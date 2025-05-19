@@ -185,7 +185,7 @@ public class TransferControllerTest {
 
         verify(walletService, times(1)).transfer(any(TransferRequest.class));
     }
-    
+
     @Test
     void transfer_NullTransactionIdHandling_ReturnsResponseWithoutTransactionId() throws Exception {
         // Arrange - Create a request with valid data but explicitly include a null transactionId
@@ -199,7 +199,7 @@ public class TransferControllerTest {
         String requestJson = String.format(
                 "{\"transactionId\":\"%s\",\"sourceAccountId\":\"%s\",\"destinationAccountId\":\"%s\",\"amount\":%s}",
                 transactionId, sourceAccountId, destinationAccountId, amount);
-        
+
         // Mock the wallet service behavior to not throw an exception
         doNothing().when(walletService).transfer(any(TransferRequest.class));
         

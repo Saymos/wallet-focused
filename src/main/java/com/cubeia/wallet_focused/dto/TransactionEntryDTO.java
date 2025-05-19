@@ -35,7 +35,7 @@ public record TransactionEntryDTO(
 
     /**
      * Factory method to create a DTO from a model object.
-     * 
+     *
      * @param model the TransactionEntry model to convert
      * @return a new TransactionEntryDTO
      */
