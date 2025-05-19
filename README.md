@@ -32,7 +32,7 @@ A Java Spring Boot wallet service that implements basic bookkeeping (accounting)
 
 ```bash
 # Clone the repository (if not done already)
-git clone https://github.com/yourusername/wallet-focused.git
+git clone https://github.com/Saymos/wallet-focused.git
 cd wallet-focused
 
 # Build the application
@@ -328,7 +328,3 @@ Test coverage includes:
 - Controller tests with MockMvc for API validation
 - Concurrency tests to verify thread safety and deadlock prevention
 - Validation tests for error handling
-
-## License
-
-[MIT License](LICENSE) 
